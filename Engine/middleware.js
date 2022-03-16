@@ -40,21 +40,33 @@ module.exports = async (request, response) => {
 
     if (config.request.checkOrigin === true) {
 
-        targetOrigin = config.request.allowedURLS.filter(origin => {
-            return origin.url === headers.origin
+        let allowedUrls = [];
+
+        try {
+            allowedUrls = fs.readFileSync(`${rootpath}/bin/${config.request.allowedURLS}`, 'utf8');
+            allowedUrls = allowedUrls.split(/\r?\n/);
+
+        } catch (error) {
+            console.log(error);
+        }
+
+
+        // targetOrigin = config.request.allowedURLS.filter(origin => {
+        targetOrigin = allowedUrls.filter(origin => {
+            return origin === headers.origin
         });
 
-        if(targetOrigin.length > 0){
+        if (targetOrigin.length > 0) {
             headers.source = targetOrigin[0].id;
         }
     }
 
-    if('authorization' in headers){
+    if ('authorization' in headers) {
 
         //Check if Domains allowed to run can make request
         const checkDomainSecurities = await domainSecurity(request);
 
-        if(checkDomainSecurities.status !== 1){
+        if (checkDomainSecurities.status !== 1) {
 
             Payload.renderObject({
                 headCode: 406,
@@ -62,11 +74,11 @@ module.exports = async (request, response) => {
                 status: 2,
                 code: 'C000-406'
             },
-            response);
+                response);
 
             return;
 
-        }else{
+        } else {
             request.headers.source = checkDomainSecurities.data.source;
         }
 
@@ -82,17 +94,17 @@ module.exports = async (request, response) => {
                     status: 2,
                     code: 'C000-406'
                 },
-                response);
+                    response);
 
                 return;
 
             } else {
 
-                if(config.environment != 'production') {
+                if (config.environment != 'production') {
                     response.setHeader('Access-Control-Allow-Origin', '*');
-                }else{
+                } else {
 
-                    if(targetOrigin.length === 0){
+                    if (targetOrigin.length === 0) {
 
                         Payload.renderObject({
                             headCode: 406,
@@ -100,9 +112,9 @@ module.exports = async (request, response) => {
                             status: 2,
                             code: 'C001-406'
                         },
-                        response);
+                            response);
                         return;
-                    }else{
+                    } else {
                         response.setHeader('Access-Control-Allow-Origin', headers.origin);
                     }
 
@@ -112,7 +124,7 @@ module.exports = async (request, response) => {
 
             }
 
-        }else{
+        } else {
             response.setHeader('Access-Control-Allow-Origin', '*');
         }
 
@@ -130,7 +142,7 @@ module.exports = async (request, response) => {
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     response.setHeader('Access-Control-Allow-Credentials', true);
 
-    if(method === 'get' || method === 'head'){
+    if (method === 'get' || method === 'head') {
         const queryURL = request.url.split('?')[0];
 
         request._stout.Query = request.url.split('?')[1];
@@ -184,7 +196,7 @@ module.exports = async (request, response) => {
                     status: 2,
                     code: 'C005-406'
                 },
-                response);
+                    response);
 
                 return;
             }
@@ -197,10 +209,10 @@ module.exports = async (request, response) => {
             //Hanle Issues with Request coming with Query Params too
             let query = {};
 
-            if(method.toLowerCase() === 'get' || method.toLowerCase() === 'head'){
+            if (method.toLowerCase() === 'get' || method.toLowerCase() === 'head') {
                 // Build Query Body from request Params
 
-                if('Query' in request._stout && request._stout.Query !== undefined){
+                if ('Query' in request._stout && request._stout.Query !== undefined) {
 
                     let requestQuery = request._stout.Query;
                     let decodedQuery = decodeURIComponent(requestQuery);
@@ -209,19 +221,19 @@ module.exports = async (request, response) => {
 
                     //If JSON is sent it will work here
                     try {
-                        query = JSON.parse( decodedQuery );
+                        query = JSON.parse(decodedQuery);
                     } catch (e) {
                         query = false;
                     }
 
 
-                    if(query === false){
+                    if (query === false) {
 
                         try {
 
                             const pairs = decodedQuery.split('&');
                             let result = {};
-                            pairs.forEach(function(pair) {
+                            pairs.forEach(function (pair) {
                                 pair = pair.split('=');
                                 result[pair[0]] = decodeURIComponent(pair[1] || '');
                             });
@@ -235,7 +247,7 @@ module.exports = async (request, response) => {
 
                     }
 
-                }else{
+                } else {
                     query = {};
                 }
 
@@ -251,8 +263,8 @@ module.exports = async (request, response) => {
 
                 if (requestMethod.length > 0) {
 
-                    if(method.toLowerCase() === 'get' || method.toLowerCase() === 'head'){
-                        if(request._stout.hasQuery === 1){
+                    if (method.toLowerCase() === 'get' || method.toLowerCase() === 'head') {
+                        if (request._stout.hasQuery === 1) {
                             query = query;
                         }
 
@@ -271,7 +283,7 @@ module.exports = async (request, response) => {
 
 
                     //Add All children of query to body
-                    if(Object.keys(query).length > 0){
+                    if (Object.keys(query).length > 0) {
                         let querykeys = Object.keys(query)
                         querykeys.forEach(k => {
                             requestData[k] = query[k];
@@ -281,7 +293,7 @@ module.exports = async (request, response) => {
                     const runMethod = await methodClass[segmentedPath[3]]({
                         body: requestData,
                         header: headers,
-                        query : query
+                        query: query
                     });
 
                     Payload.renderObject(runMethod, response);
@@ -291,11 +303,11 @@ module.exports = async (request, response) => {
                 } else {
 
                     Payload.renderObject({
-                            headCode: 406,
-                            message: 'Invalid Endpoint Method',
-                            status: 2,
-                            code: 'C006-406'
-                        },
+                        headCode: 406,
+                        message: 'Invalid Endpoint Method',
+                        status: 2,
+                        code: 'C006-406'
+                    },
                         response);
                 }
 
@@ -305,11 +317,11 @@ module.exports = async (request, response) => {
                 console.log(e);
 
                 Payload.renderObject({
-                        headCode: 500,
-                        message: 'Error Processing Request',
-                        status: 2,
-                        code: 'C007-406'
-                    },
+                    headCode: 500,
+                    message: 'Error Processing Request',
+                    status: 2,
+                    code: 'C007-406'
+                },
                     response);
 
                 return;
@@ -348,11 +360,11 @@ module.exports = async (request, response) => {
 
             } else {
                 Payload.renderObject({
-                        headCode: 406,
-                        message: 'Invalid Endpoint, Please verify and try again',
-                        status: 2,
-                        code: 'C004-406'
-                    },
+                    headCode: 406,
+                    message: 'Invalid Endpoint, Please verify and try again',
+                    status: 2,
+                    code: 'C004-406'
+                },
                     response);
                 return;
             }
@@ -364,11 +376,11 @@ module.exports = async (request, response) => {
         response.setHeader('Access-Control-Allow-Methods', 'GET');
         if (method !== 'get') {
             Payload.renderObject({
-                    headCode: 406,
-                    message: 'Request Undefined',
-                    status: 2,
-                    code: 'C003-406'
-                },
+                headCode: 406,
+                message: 'Request Undefined',
+                status: 2,
+                code: 'C003-406'
+            },
                 response);
             return;
         }
