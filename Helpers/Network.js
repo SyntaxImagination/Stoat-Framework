@@ -16,15 +16,22 @@ const {
 module.exports = {
 
     //Send Post Request
-    post: async (params) => {
+    netPost: async (params) => {
         params.method = 'POST';
         let response = await processRequest(params);
         return response;
     },
 
-    //Send Post Request
-    get: async (params) => {
+    //Send Get Request
+    netGet: async (params) => {
         params.method = 'GET';
+        let response = await processRequest(params);
+        return response;
+    },
+
+    //Send Patch Request
+    netPatch: async (params) => {
+        params.method = 'PATCH';
         let response = await processRequest(params);
         return response;
     }
