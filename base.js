@@ -1,13 +1,13 @@
 global.rootpath = __dirname;
 const { env } = require('process');
 
-const configFile = './bin/.config';
+const configFile = '.config';
 
 const fs = require('fs');
 
 let config;
 
-config = fs.readFileSync(`${rootpath}/${configFile}`, 'utf-8');
+config = fs.readFileSync(`${rootpath}/bin/${configFile}`, 'utf-8');
 if (typeof (config) === 'string') {
     config = JSON.parse(config);
 }
@@ -91,9 +91,12 @@ if (httpConfig.http === true || httpConfig.https === true) {
 
 }
 
-
-
-if (wsConfig.ws === true || wsConfig.wss === true) {
+if (
+    wsConfig.ws === true ||
+    wsConfig.ws === 'true' ||
+    wsConfig.wss === true ||
+    wsConfig.wss === 'true'
+) {
     const Websocket = require(`${rootpath}/${config.folders.helpers}/Websocket.js`);
     // const SocketIO = require(`${rootpath}/${config.folders.helpers}/SocketIO.js`);
 
@@ -105,9 +108,4 @@ if (wsConfig.ws === true || wsConfig.wss === true) {
         new Websocket().startServer(wssConfig);
     }
 
-}
-
-if (socketIOConfig.socketio === true) {
-    const SocketIO = require(`${rootpath}/${config.folders.helpers}/SocketIO.js`);
-    new SocketIO().startServer(socketIOConfig);
 }
