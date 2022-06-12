@@ -75,12 +75,17 @@ function processRequest(params) {
         //Check if there is port
         let urlPort = url[1].split(':');
 
+        [x, ...endpoint] = url[1].split('/');
+        endpoint = `/${endpoint.join('/')}`;
+
+
         //Build Request Data
         let requestDetails = {
             protocol: `${url[0]}:`,
             hostname: urlPort[0],
             method: params.method,
-            path: encodeURI(params.endpoint),
+            // path: encodeURI(params.endpoint),
+            path: encodeURI(endpoint),
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': params.data.length
@@ -89,7 +94,7 @@ function processRequest(params) {
 
         //Port
         if (urlPort.length > 0) {
-            requestDetails.port = urlPort[1];
+            requestDetails.port = urlPort[1].split('/')[0];
         }
 
 
@@ -111,11 +116,13 @@ function processRequest(params) {
         for (key in params) {
             if (!requestDetails.hasOwnProperty(key)) {
 
-                if (key === 'endpoint' || key === 'url' || key === 'data' || key === 'headers') {} else {
+                if (key === 'endpoint' || key === 'url' || key === 'data' || key === 'headers') { } else {
                     requestDetails[key] = params[key];
                 }
             }
         }
+
+        console.log(requestDetails);
 
         let req = method.request(requestDetails, resp => {
 
@@ -124,26 +131,26 @@ function processRequest(params) {
             response.headers = resp.headers;
 
             resp.on('data', rx => {
-                  // process.stdout.write(rx);
+                // process.stdout.write(rx);
 
-                  let decoder = new StringDecoder('utf8');
-                  let stringResponse = decoder.write(rx);
+                let decoder = new StringDecoder('utf8');
+                let stringResponse = decoder.write(rx);
 
-                  //Since we deal with REST API convert data to Object
-                  if(typeof stringResponse === 'string'){
-                        try {
-                              stringResponse = JSON.parse(stringResponse);
-                        } catch (e) {
-                              // console.log(e);
-                              response.statusCode = 2;
-                              stringResponse = {};
-                        }
-                  }
+                //Since we deal with REST API convert data to Object
+                if (typeof stringResponse === 'string') {
+                    try {
+                        stringResponse = JSON.parse(stringResponse);
+                    } catch (e) {
+                        // console.log(e);
+                        response.statusCode = 2;
+                        stringResponse = {};
+                    }
+                }
 
-                  response.body = stringResponse;
-                  // console.log(response);
+                response.body = stringResponse;
+                console.log(response);
 
-                  success(response);
+                success(response);
             })
 
         });
