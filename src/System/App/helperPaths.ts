@@ -2,22 +2,31 @@
  * Module : Paths
  * Desc : The paths file holds the definition of all defined paths in the application 
 */
+
+const paths = stoat.paths,
+    config = stoat.config;
+
 //Definitions
 const _HelperDirPath = `${__rootPath}/${config.folders.helpers}`;
+const _SystemHelperPath = `${__rootPath}/System/Helpers`;
 
-global._HelperDir = _HelperDirPath;
-global._OthersDir = `${__rootPath}/${config.folders.others}`
 
-global._Helper = `${_HelperDir}/Helper.js`;
-global._PayloadHelper = `${_HelperDir}/Payload.js`;
-global._EncryptionHelper = `${_HelperDir}/Encryption.js`;
-global._NetworkHelper = `${_HelperDir}/Network.js`;
-global._MailHelper = `${_HelperDir}/Mail.js`;
-global._ExtendedHelper = `${_HelperDir}/Extended.js`;
-global._WebsocketHelper = `${_HelperDir}/Websocket.js`;
+const _HelperDir = _HelperDirPath;
 
-global._SecurityHelper = `${_HelperDir}/Security/index.js`;
+paths._HelperDir = _HelperDirPath;
 
-global._PublicPath = `${__rootPath}/${config.folders.view}`;
+paths._OthersDir = `${__rootPath}/${config.folders.others}`;
 
-global._ConfigFile = config.folders.config;
+paths._Helper = `${_SystemHelperPath}/Helper.js`;
+paths._PayloadHelper = `${_SystemHelperPath}/Payload.js`;
+paths._EncryptionHelper = `${_SystemHelperPath}/Encryption.js`;
+paths._NetworkHelper = `${_SystemHelperPath}/Network.js`;
+paths._MailHelper = `${_SystemHelperPath}/Mail.js`;
+paths._ExtendedHelper = `${_SystemHelperPath}/Extended.js`;
+paths._WebsocketHelper = `${_SystemHelperPath}/Websocket.js`;
+
+paths._SecurityHelper = `${_SystemHelperPath}/Security/index.js`;
+
+
+paths._PublicPath = `${__rootPath}/${config.folders.view}`;
+// paths._ConfigFile = config.folders.config;
