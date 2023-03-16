@@ -1,3 +1,6 @@
+const paths = stoat.paths,
+    config = stoat.config;
+
 import * as https from "https";
 import * as http from "http";
 import {readFileSync} from 'fs';

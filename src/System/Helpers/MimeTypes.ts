@@ -3,10 +3,10 @@
  * Desc : Mimetypes are used to decide what files are translatable by the server
  */
 
-console.log(_Helper);
+const paths = stoat.paths;
 
 // import definedMimeTypes from `${_Helper}/MimeTypes`;
-const { definedMimeTypes } = require(`${_HelperDir}/MimeTypes`);
+const { definedMimeTypes } = require(`${paths._HelperDir}/MimeTypes`);
 
 let coreMimeTypes = [
     //basic Web Assets

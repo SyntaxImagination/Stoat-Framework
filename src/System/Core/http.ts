@@ -1,4 +1,7 @@
-type NetStructure = Record<string, any>;
+const paths = stoat.paths,
+    config = stoat.config;
+
+type NetStructure = Obj;
 
 import * as http from "http"; 
 

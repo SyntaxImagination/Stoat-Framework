@@ -1,7 +1,7 @@
 /**
  * Module : Core Payload Helper
  * Desc : This Helper will makes it possible to process payloads from the Core
- * Updated : 29th Dec 2022
+ * Updated : 14th March, 2023
  * 
  *  The Request Module is needed to handle all requests
  *  Manage what comes in and help format in the right things where needed
@@ -10,10 +10,12 @@
  * 
 */
 
-import { MimeTypes } from './MimeTypes';
+
 import { readFileSync } from 'fs';
 import { parse } from 'url';
 import { StringDecoder } from 'string_decoder';
+
+import { MimeTypes } from './MimeTypes';
 
 import { ServerResponse, IncomingMessage } from 'http';
 import { log } from 'console';
