@@ -4,6 +4,9 @@
  * Desc : This is the intermediary file between the Staot Core and User applications 
 */
 
+const paths = stoat.paths,
+config = stoat.config;
+
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as url from 'url';
 
@@ -16,8 +19,6 @@ import {Payload} from '../Helpers/Payload';
 
 type HttpRequest = http.IncomingMessage;
 type HttpResponse = http.ServerResponse;
-
-
 
 module.exports = async (request:HttpRequest, response:HttpResponse) => {
 
@@ -34,7 +35,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
     const method = request.method?.toLowerCase(),
     headers = request.headers;
 
-    headers.urlPath = path; 
+    headers.urlPath = path;
 
     //Authorize all GET and HEAD Requests while other methods requires Some Soerce
     let targetOrgin = [];
@@ -45,7 +46,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
         let allowedUrls:string[] = [];
 
         try {
-            let filePath = `${_OthersDir}/allowedUrls.txt`; 
+            let filePath = `${paths._OthersDir}/allowedUrls.txt`; 
 
             const checkFile = existsSync(filePath);
             
@@ -56,7 +57,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             allowedUrls = listOfAlllowedUrls.split(/\r?\n/);
 
         } catch (error) {
-            log(error);
+            // log(error);
         }
 
         targetOrgin = allowedUrls.filter((origin:string) => {
@@ -65,6 +66,13 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
 
         if(targetOrgin.length > 0){
             headers.source = targetOrgin[0]
+        }
+    } 
+    else{
+        response.setHeader('Access-Control-Allow-Origin', '*');
+        if('origin' in headers){
+        }else{
+            headers.origin = headers.host;
         }
     }
 
@@ -87,40 +95,42 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             request.headers.source = checkDomainSecurities.data.source;
         }
 
-    } else {
+    }
+    else {
 
-        if(method != 'get' && method != 'head'){
+        if (method != 'get' && method != 'head') {
 
-            if(
-                !headers.hasOwnProperty('origin') 
+
+            if (
+                !headers.hasOwnProperty('origin')
                 || headers.origin === ""
-            ){
+            ) {
 
                 PayloadHelper.renderObject({
-                    headCode : 406,
-                    message : "Uknown Origin",
-                    status : 2,
-                    code : "C001-406"
+                    headCode: 406,
+                    message: "Uknown Origin",
+                    status: 2,
+                    code: "C001-406"
                 },
-                response);
+                    response);
 
                 return;
 
             } else {
 
-                if(config.environment != 'production'){
+                if (config.environment != 'production') {
                     response.setHeader('Access-Control-Allow-Origin', '*');
                     response.setHeader('Application-Environment', config.environment);
                 } else {
 
-                    if(targetOrgin.length === 0){
+                    if (targetOrgin.length === 0) {
                         PayloadHelper.renderObject({
                             headCode: 406,
                             message: 'Origin not Allowed',
                             status: 2,
                             code: 'C002-406'
                         }, response);
-                    }else{
+                    } else {
                         response.setHeader('Access-Control-Allow-Origin', String(headers.origin));
                     }
 
@@ -131,6 +141,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
         } else {
             response.setHeader('Access-Control-Allow-Origin', '*');
         }
+
     }
 
 
@@ -181,7 +192,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             notFoundPage = `${__rootPath}/${config.folders.config}/Public/404.html`;
         }
 
-        let endpointMethod;
+        let endpointClass;
         
         if( segmentedPath[1].includes(apiEndpoint) ){
             const requestData:any = await PayloadHelper.getRequestData(request);
@@ -190,9 +201,10 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             __Stoat['requestEndPoint'] = segmentedPath[2];
 
             try {
-                endpointMethod = require(`${__rootPath}/${config.folders.controller}/${segmentedPath[1]}/${segmentedPath[2]}`);
+                endpointClass = require(`${__rootPath}/${config.folders.controller}/${segmentedPath[1]}/${segmentedPath[2]}`);
+                
             } catch (error) {
-                log(error);
+                // log(error);
 
                 PayloadHelper.renderObject({
                     headCode : 406,
@@ -205,7 +217,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             }
 
             //Run the Called Method
-            const methodClass = new endpointMethod();
+            const methodClass = new endpointClass();
 
             //Handle Issues with Requests Coming with Queries and Params
             let query:any = {};
@@ -255,12 +267,29 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             //Run the Method 
             try {
     
-                let classMethod = methodClass.method;
-                let requestMethod = classMethod.filter( (mth:{ name:string, method:string }) => {
-                    return segmentedPath[3] === mth.name && method === mth.method
-                } );
+                let classMethod = methodClass.methods,
+                requestMethod;
+                
+                try {
+                    
+                    requestMethod = classMethod.filter( (mth:{ name:string, method:string }) => {
+                        return segmentedPath[3] === mth.name && method === mth.method
+                    });
 
-                if(requestMethod > 0){
+                } catch (error) {
+                    
+                    PayloadHelper.renderObject({
+                        headCode: 500,
+                        message: 'Endpoint Unavailable',
+                        status: 2,
+                        code: 'C006-500'
+                    }, response);
+
+                    return;
+                }
+
+
+                if(requestMethod.length > 0){
 
                     if(
                         method?.toLowerCase() === 'get'
@@ -279,33 +308,58 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                             requestData[k] = query[k];
                         })
                     }
-
+                    
+                    let validCallBack = 0; //Valid callback variable to ensure we dont resend 
                     const runMethod = methodClass[segmentedPath[3]](
                         {
                             body : requestData,
                             header : headers,
                             query : query
                         }
-                        // ,callback
+                        ,
+                        //If its callback function then run it here
+                        (callback:Obj) => {
+                            //Send Reponse to User
+                            validCallBack = 1;
+                            PayloadHelper.renderObject(callback, response);
+                        }
                     );
+
+                    // else if not a callback function but a return function we shoudl check if its a promise or a normal function
+                    if(runMethod instanceof Promise ){
+                        const feedbackResponse = await runMethod;
+                        //Send Reponse to User
+                        PayloadHelper.renderObject(feedbackResponse, response);
+                    }else{
+                        //Send Reponse to User
+                        // if(validCallBack === 0){
+                        if(
+                            validCallBack === 0
+                            && runMethod !== undefined
+                        ){
+                            PayloadHelper.renderObject(runMethod, response);
+                        }
+                    }
+
+                    
 
                 }else{
                     PayloadHelper.renderObject({
                         headCode : 406,
                         message : "Invalid Edpoint Method",
                         status : 2,
-                        code : 'C006-406'
+                        code : 'C007-406'
                     }, response);
                 }
                 
             } catch (error) {
-                log(error);
+                // log(error);
     
                 PayloadHelper.renderObject({
                     headCode: 500,
                     message: 'Error Processing Request',
                     status: 2,
-                    code: 'C007-406'
+                    code: 'C008-406'
                 }, response);
 
                 return;
@@ -320,7 +374,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                     file = 'index.html';
                 }
 
-                const filePath = `${_PublicPath}/${file}`;
+                const filePath = `${paths._PublicPath}/${file}`;
                 const fileCheck = existsSync(filePath);
 
                 if (fileCheck === true) {
@@ -341,12 +395,12 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
 
                 
 
-            }else{
+            } else{
                 PayloadHelper.renderObject({
                     headCode: 406,
                     message: 'Invalid Endpoint, Please verify and try again',
                     status: 2,
-                    code: 'C008-406'
+                    code: 'C009-406'
                 },
                 response);
                 return;
@@ -370,9 +424,5 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
         }
 
     }
-
-
-
-
 
 }
