@@ -6,17 +6,18 @@ declare global {
     stoat : {
         paths : Obj,
         config : Obj,
-        db : Obj|[],
-        dynamicImport : Function
+        // db : unknown,
+        db : any,
+        dynamicImport : Function,
     },
 
     __rootPath: string,
     __rootParent: string,
     
-    db : [],
+    // StoatAppType : string,
 
     //Stoat Global Variable
-    _stoatData:Obj
+    __stoatData:Obj
 }
 
 export {};
