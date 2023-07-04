@@ -5,13 +5,13 @@
 import { log } from "console";
 import { readFileSync } from "fs";
 
-export function runConfig(){ 
+export function runConfig() {
 
     /**
      * CONFIG
      */
-    let configData:Obj = {};
-    let configRawData:string = readFileSync(`${_s.misc.rootParent}/bin/.config`, 'utf-8');
+    let configData: Obj = {};
+    let configRawData: string = readFileSync(`${_s.misc.rootParent}/bin/.config`, 'utf-8');
 
 
     if (typeof (configRawData) === 'string') {
@@ -25,11 +25,12 @@ export function runConfig(){
         'baseUrl',
         'app',
         'packages',
-        'definitions'
+        'definitions',
+        'appType'
     ],
-    returnConfig = {
-        net : configData.net,
-    }
+        returnConfig = {
+            net: configData.net,
+        }
 
     //Merge Data for Config
     neededConfigs.forEach(key => {
@@ -37,20 +38,20 @@ export function runConfig(){
     });
 
     //Paths
-    if('folders' in configData){
+    if ('folders' in configData) {
         _s.paths = configData.folders;
     }
 
     //Database
-    if('db' in configData){
-        _s.db = configData.db;
+    if ('db' in configData) {
+        _s.dbConfig = configData.db;
     }
 
     //Request and Responses
-    if('request' in configData){
+    if ('request' in configData) {
         _s.config.requestConf = configData.request;
     }
-    if('response' in configData){
+    if ('response' in configData) {
         _s.config.responseConf = configData.response;
     }
 
@@ -59,9 +60,9 @@ export function runConfig(){
      */
 
     //Go through base helpers and add user defined helpers
-    for(let key in _s.helpers){
+    for (let key in _s.helpers) {
         try {
-            
+
             const module = require(`${_s.misc.rootPath}/${_s.paths.helpers}/${key}`);
 
             for (let funx in module) {
@@ -69,25 +70,39 @@ export function runConfig(){
             }
 
         } catch (error) {
-            log(error); 
+            log(error);
         }
     }
 
     //Net and MimeTypes
     try {
-        
+
         const MimeTypes = require(`${_s.misc.rootPath}/${_s.paths.helpers}/MimeTypes`);
 
-        MimeTypes.default.forEach((mime:Obj) => {
+        MimeTypes.default.forEach((mime: Obj) => {
             _s.__system.mimeTypes.push(mime);
         })
-        
+
 
     } catch (error) {
         log(error)
     }
 
+    //Do Installations - Package Installer path
+    const systemPath = `${_s.misc.rootPath}/${_s.paths.config}`,
+        { checkPackage, installPackage } = require(`${systemPath}/App/installer`);
+
+    //Now Check and install packages
+    configData.packages.forEach(async (p: string) => {
+        let verifyPackage: boolean = await checkPackage(p),
+            verifyInstall: boolean;
+
+        if (verifyPackage === false) {
+            installPackage(p);
+        }
+    });
+
     //Return Net Config
     return returnConfig;
-    
+
 }
