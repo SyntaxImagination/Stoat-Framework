@@ -1,5 +1,4 @@
-const paths = stoat.paths,
-    config = stoat.config;
+const paths = stoat.paths;
 
 import * as https from "https";
 import * as http from "http";
@@ -19,8 +18,8 @@ export function run(
     if (!isNaN(net['data'].port)) {
 
         const sslOptions = {
-            key: readFileSync(`${__rootParent}/${config.others}/SSL/${net.certKey}`),
-            cert: readFileSync(`${__rootParent}/${config.others}/SSL/${net.certPem}`)
+            key: readFileSync(`${_s.misc.rootParent}/${paths.others}/SSL/${net.certKey}`),
+            cert: readFileSync(`${_s.misc.rootParent}/${paths.others}/SSL/${net.certPem}`)
         };
 
         const server = https.createServer(
@@ -28,8 +27,7 @@ export function run(
             (request: HttpsRequest, response: HttpsResponse) => {
 
             try {
-                require(`../index.js`);
-                require(`../middleware.js`)(request, response);
+                require(`${_s.misc.rootPath}/${paths.config}/App/middleware.js`)(request, response);
             } catch (err) {
                 console.log(err);
                 console.log('Config Path Invalid');

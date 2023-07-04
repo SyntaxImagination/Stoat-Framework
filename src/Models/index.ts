@@ -1,20 +1,20 @@
-/**
- * This file act as db
- */
+// /**
+//  * This file act as db
+//  */
+const paths = _s.paths;
 
 import { log } from "console";
 import { copyFileSync, readdirSync } from "fs";
 
 let typ = __stoatData.appType;
 
-const systemPath = `${__rootPath}/${stoat.config.folders.system}`,
+const systemPath = `${_s.misc.rootPath}/${paths.system}`,
 { checkPackage, installPackage } = require(`${systemPath}/App/installer`);
-let modelsPath = `${__rootPath}/${stoat.config.folders.model}`;
-if (typ === 'ts'){
-    modelsPath = `${__stoatData.tsDir}/${stoat.config.folders.model}`;
-}
 
-log(modelsPath);
+let modelsPath = `${_s.misc.rootPath}/${paths.model}`;
+if (typ === 'ts'){
+    modelsPath = `${__stoatData.tsDir}/${paths.model}`;
+}
 
 type DatabaseRecord = {
     type: string,
@@ -22,7 +22,7 @@ type DatabaseRecord = {
     package: string,
     file: string,
     url: string,
-    port: number | string
+    port: number
 };
 
 module.exports = async (databases: DatabaseRecord[], callback:Function) => {

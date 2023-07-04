@@ -1,5 +1,4 @@
-const paths = stoat.paths,
-    config = stoat.config;
+const paths = _s.paths;
 
 type NetStructure = Obj;
 
@@ -19,8 +18,7 @@ export function run(
         const server = http.createServer((request: HttpRequest, response: HttpResponse) => {
 
             try {
-                require(`${__rootPath}/${config.folders.config}/App/helperPaths.js`);
-                require(`${__rootPath}/${config.folders.config}/App/middleware.js`)(request, response);
+                require(`${_s.misc.rootPath}/${paths.config}/App/middleware.js`)(request, response);
             } catch (err) {
                 console.log(err);
                 console.log('Config Path Invalid');

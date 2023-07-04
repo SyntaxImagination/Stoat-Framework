@@ -15,8 +15,6 @@ import { readFileSync } from 'fs';
 import { parse } from 'url';
 import { StringDecoder } from 'string_decoder';
 
-import { MimeTypes } from './MimeTypes';
-
 import { ServerResponse, IncomingMessage } from 'http';
 import { log } from 'console';
 
@@ -24,7 +22,7 @@ type HttpRequest = IncomingMessage;
 type HttpResponse = ServerResponse;
 
 
-const mimetypes:{ file:any, content:string }[] = MimeTypes; 
+const mimetypes:{ file:any, content:string }[] = _s.__system.mimeTypes; 
 
 
 export class Payload {

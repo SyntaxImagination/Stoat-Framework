@@ -1,4 +1,4 @@
-export const definedMimeTypes = [
+export default [
     {
         file: ['.txt'],
         content: 'text/plain'

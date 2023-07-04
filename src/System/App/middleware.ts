@@ -4,16 +4,17 @@
  * Desc : This is the intermediary file between the Staot Core and User applications 
 */
 
-const paths = stoat.paths,
-config = stoat.config;
+const paths = _s.paths,
+config = _s.config,
+security = _s.helpers.Security;
+
+const domainSecurity = security.domainSecurity;  
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as url from 'url';
 
 import * as http from "http";
 import { log } from "console";
-
-import { domainSecurity } from '../Helpers/Security';
 
 import {Payload} from '../Helpers/Payload';
 
@@ -41,7 +42,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
     let targetOrgin = [];
 
     //TODO - Need to work on Origins 
-    if(config.request.checkOrigin === true){
+    if(config.requestConf.checkOrigin === true){
 
         let allowedUrls:string[] = [];
 
@@ -148,7 +149,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
     //Method Checks 
     let allowedMethods = "";
     
-    config.request.allowedMethods.forEach((method:string) => {
+    config.requestConf.allowedMethods.forEach((method:string) => {
         allowedMethods = `${allowedMethods}, ${method.toUpperCase()}`;
     });
 
@@ -171,7 +172,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
     //Block all Request Outside get if API not enabled
     if(config.app.api.allow === true){
         //Check for CORS and enable Options
-        if(config.request.cors === true){
+        if(config.requestConf.cors === true){
             if(method === 'options'){
                 response.writeHead(204, headers);
                 response.end();
@@ -183,13 +184,13 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
         //Ensure API Endpoint is available
         const apiEndpoint = config.app.api.versionPrefix,
 
-        publicPath = `${__rootPath}/${config.folders.view}`,
-        indexPage = `${publicPath}/${config.response.indexPage}`;
-        let notFoundPage = `${publicPath}/${config.response.notFoundPage}`;
+        publicPath = `${_s.misc.rootPath}/${paths.view}`,
+        indexPage = `${publicPath}/${config.responseConf.indexPage}`;
+        let notFoundPage = `${publicPath}/${config.responseConf.notFoundPage}`;
         
         const errorFileCheck = existsSync(notFoundPage);
         if(errorFileCheck === false){
-            notFoundPage = `${__rootPath}/${config.folders.config}/Public/404.html`;
+            notFoundPage = `${_s.misc.rootPath}/${paths.config}/Public/404.html`; 
         }
 
         let endpointClass;
@@ -201,7 +202,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             __Stoat['requestEndPoint'] = segmentedPath[2];
 
             try {
-                endpointClass = require(`${__rootPath}/${config.folders.controller}/${segmentedPath[1]}/${segmentedPath[2]}`);
+                endpointClass = require(`${_s.misc.rootPath}/${paths.controller}/${segmentedPath[1]}/${segmentedPath[2]}`);
                 
             } catch (error) {
                 // log(error);
@@ -386,7 +387,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                     targetFile = targetFile[(targetFile.length - 1)];
 
                     if (targetFile === 'favicon.ico') {
-                        PayloadHelper.renderFile(`${__rootPath}/${config.folders.config}/Public/favicon.ico`, response); 
+                        PayloadHelper.renderFile(`${_s.misc.rootPath}/${paths.config}/Public/favicon.ico`, response); 
                     } else {
                         PayloadHelper.renderFile(notFoundPage, response);
                     }

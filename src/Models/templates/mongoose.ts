@@ -22,7 +22,7 @@ let connection: mongoose.Mongoose;
 
 module.exports = async (dbData:DatabaseRecord) => {
 
-    stoat.db[dbData.name] = {};
+    _s.db[dbData.name] = {};
 
     async function connect() {
         try {
