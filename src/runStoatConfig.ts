@@ -3,7 +3,7 @@
  */
 
 import { log } from "console";
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 
 export function runConfig() {
 
@@ -36,6 +36,11 @@ export function runConfig() {
     neededConfigs.forEach(key => {
         _s.config[key] = configData[key];
     });
+
+    //Endure Environment is set
+    if (_s.config.environment === '') {
+        _s.config.environment = 'stagging';
+    }
 
     //Paths
     if ('folders' in configData) {
@@ -73,6 +78,28 @@ export function runConfig() {
             log(error);
         }
     }
+    //Now add Keys not in helpers (Defined by users)
+    const helperDir = readdirSync(`${_s.misc.rootPath}/${_s.paths.helpers}`);
+    helperDir.forEach(fileName => {
+        //Remove the Dot
+        const mod = fileName.split('.')[0],
+            availableHelpers = Object.keys(_s.helpers);
+
+        if (
+            !(availableHelpers.includes(mod))
+            && mod != 'MimeTypes'
+        ) {
+
+            //Add the Helper
+            _s.helpers[mod] = {};
+
+            const module = require(`${_s.misc.rootPath}/${_s.paths.helpers}/${mod}`);
+
+            for (let funx in module) {
+                _s.helpers[mod][funx] = module[funx];
+            }
+        }
+    });
 
     //Net and MimeTypes
     try {

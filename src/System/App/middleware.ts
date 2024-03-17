@@ -5,10 +5,10 @@
 */
 
 const paths = _s.paths,
-config = _s.config,
-security = _s.helpers.Security;
+    config = _s.config,
+    security = _s.helpers.Security;
 
-const domainSecurity = security.domainSecurity;  
+const domainSecurity = security.domainSecurity;
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as url from 'url';
@@ -16,25 +16,25 @@ import * as url from 'url';
 import * as http from "http";
 import { log } from "console";
 
-import {Payload} from '../Helpers/Payload';
+import { Payload } from '../Helpers/Payload';
 
 type HttpRequest = http.IncomingMessage;
 type HttpResponse = http.ServerResponse;
 
-module.exports = async (request:HttpRequest, response:HttpResponse) => {
+module.exports = async (request: HttpRequest, response: HttpResponse) => {
 
     global.__Stoat = {};
 
     const PayloadHelper = new Payload();
-    
-    const urlString:any = request.url,
-    passedUrl = url.parse(urlString, true),
-    path:any = passedUrl.pathname;
-    
+
+    const urlString: any = request.url,
+        passedUrl = url.parse(urlString, true),
+        path: any = passedUrl.pathname;
+
     let segmentedPath = path.split('/');
 
     const method = request.method?.toLowerCase(),
-    headers = request.headers;
+        headers = request.headers;
 
     headers.urlPath = path;
 
@@ -42,16 +42,16 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
     let targetOrgin = [];
 
     //TODO - Need to work on Origins 
-    if(config.requestConf.checkOrigin === true){
+    if (config.requestConf.checkOrigin === true) {
 
-        let allowedUrls:string[] = [];
+        let allowedUrls: string[] = [];
 
         try {
-            let filePath = `${paths._OthersDir}/allowedUrls.txt`; 
+            let filePath = `${paths._OthersDir}/allowedUrls.txt`;
 
             const checkFile = existsSync(filePath);
-            
-            if(!checkFile){  
+
+            if (!checkFile) {
                 const writeFile = writeFileSync(filePath, 'http://localhost');
             }
             const listOfAlllowedUrls = readFileSync(filePath, 'utf-8');
@@ -61,45 +61,48 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
             // log(error);
         }
 
-        targetOrgin = allowedUrls.filter((origin:string) => {
+        targetOrgin = allowedUrls.filter((origin: string) => {
             return origin === headers.origin
         });
 
-        if(targetOrgin.length > 0){
+        if (targetOrgin.length > 0) {
             headers.source = targetOrgin[0]
         }
-    } 
-    else{
+    }
+    else {
         response.setHeader('Access-Control-Allow-Origin', '*');
-        if('origin' in headers){
-        }else{
+        if ('origin' in headers) {
+        } else {
             headers.origin = headers.host;
         }
     }
 
     //Check if we enabled Header Authorization
-    if('authorization' in headers){
+    if ('authorization' in headers) {
 
-        const checkDomainSecurities:Record<string, any> = await domainSecurity(request);
+        const checkDomainSecurities: Record<string, any> = await domainSecurity(request);
 
-        if(checkDomainSecurities.status !== 1){
+        if (checkDomainSecurities.status !== 1) {
             PayloadHelper.renderObject({
-                headCode : 406,
-                message : checkDomainSecurities.message,
-                status : 2,
-                code : 'C000-406'
-            }, 
-            response);
+                headCode: 406,
+                message: checkDomainSecurities.message,
+                status: 2,
+                code: 'C000-406'
+            },
+                response);
 
             return;
-        }else{
+        } else {
             request.headers.source = checkDomainSecurities.data.source;
         }
 
     }
     else {
 
-        if (method != 'get' && method != 'head') {
+        if (
+            method !== 'get'
+            && method !== 'head'
+        ) {
 
 
             if (
@@ -148,8 +151,8 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
 
     //Method Checks 
     let allowedMethods = "";
-    
-    config.requestConf.allowedMethods.forEach((method:string) => {
+
+    config.requestConf.allowedMethods.forEach((method: string) => {
         allowedMethods = `${allowedMethods}, ${method.toUpperCase()}`;
     });
 
@@ -158,10 +161,10 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     response.setHeader('Access-Control-Allow-Credential', String(true));
 
-    if(
-        method === 'get' 
+    if (
+        method === 'get'
         || method === 'head'
-    ){
+    ) {
         const queryUrl = String(request.url);
         const queryURL = queryUrl.split('?')[0];
 
@@ -170,10 +173,10 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
     }
 
     //Block all Request Outside get if API not enabled
-    if(config.app.api.allow === true){
+    if (config.app.api.allow === true) {
         //Check for CORS and enable Options
-        if(config.requestConf.cors === true){
-            if(method === 'options'){
+        if (config.requestConf.cors === true) {
+            if (method === 'options') {
                 response.writeHead(204, headers);
                 response.end();
                 return;
@@ -184,54 +187,81 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
         //Ensure API Endpoint is available
         const apiEndpoint = config.app.api.versionPrefix,
 
-        publicPath = `${_s.misc.rootPath}/${paths.view}`,
-        indexPage = `${publicPath}/${config.responseConf.indexPage}`;
+            publicPath = `${_s.misc.rootPath}/${paths.view}`,
+            indexPage = `${publicPath}/${config.responseConf.indexPage}`;
         let notFoundPage = `${publicPath}/${config.responseConf.notFoundPage}`;
-        
+
         const errorFileCheck = existsSync(notFoundPage);
-        if(errorFileCheck === false){
-            notFoundPage = `${_s.misc.rootPath}/${paths.config}/Public/404.html`; 
+        if (errorFileCheck === false) {
+            notFoundPage = `${_s.misc.rootPath}/${paths.config}/Public/404.html`;
         }
 
-        let endpointClass;
-        
-        if( segmentedPath[1].includes(apiEndpoint) ){
-            const requestData:any = await PayloadHelper.getRequestData(request);
+        let endpointClass: any = null;
+
+        if (segmentedPath[1].includes(apiEndpoint)) {
+            const requestData: any = await PayloadHelper.getRequestData(request);
 
             //@TODO: This is a temporal fix to know what method is called from any where, it will be removed later as we will have a stabbdard non memory tensed way to doing this
             __Stoat['requestEndPoint'] = segmentedPath[2];
 
+            //Due to typescript and ES6 issues we need to find solution around import and require - we check if we are getting function (module.exports) or we are getting object - (exports)
             try {
-                endpointClass = require(`${_s.misc.rootPath}/${paths.controller}/${segmentedPath[1]}/${segmentedPath[2]}`);
-                
+                let module = require(`${_s.misc.rootPath}/${paths.controller}/${segmentedPath[1]}/${segmentedPath[2]}`);
+
+                //Modern JS for TS
+                if (typeof module === 'object') {
+
+                    for (let key in module) {
+                        if (
+                            key.toLowerCase() === segmentedPath[2].toLowerCase()
+                        ) {
+                            endpointClass = module[key]
+                        }
+                    }
+                }
+                else if (typeof module === 'function') {
+                    endpointClass = module;
+                }
+
             } catch (error) {
-                // log(error);
+                log(error);
 
                 PayloadHelper.renderObject({
-                    headCode : 406,
-                    message : 'Invalid Endpoint Path',
-                    status : 2,
-                    code : 'C005-406'
+                    headCode: 406,
+                    message: 'Invalid Endpoint Path',
+                    status: 2,
+                    code: 'C005-406'
                 }, response);
 
                 return;
             }
 
             //Run the Called Method
-            const methodClass = new endpointClass();
+            let methodClass;
+
+            if (endpointClass === null) {
+                PayloadHelper.renderObject({
+                    headCode: 406,
+                    message: 'Invalid Endpoint Path',
+                    status: 2,
+                    code: 'C005-1-406'
+                }, response);
+            } else {
+                methodClass = new endpointClass();
+            }
 
             //Handle Issues with Requests Coming with Queries and Params
-            let query:any = {};
+            let query: any = {};
 
-            if(
+            if (
                 method?.toLowerCase() === 'get'
                 || method?.toLowerCase() === 'head'
-            ){
+            ) {
                 //Build Query from params
-                if(
+                if (
                     __Stoat.hasOwnProperty('Query')
                     && __Stoat.Query != undefined
-                ){ 
+                ) {
                     let decodedQuery = decodeURIComponent(__Stoat.Query)
 
                     //If JSON is sent then convert
@@ -241,16 +271,16 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                         query = false;
                     }
 
-                    if(query === false){
+                    if (query === false) {
 
                         try {
                             const pairs = decodedQuery.split('&');
-                            let result:Record<string, any> = {};
-                            
-                            pairs.forEach( pair => {
+                            let result: Record<string, any> = {};
+
+                            pairs.forEach(pair => {
                                 pair.split('=');
                                 result[pair[0]] = decodeURIComponent(pair[1] || '');
-                            } );
+                            });
 
                             query = result;
 
@@ -261,24 +291,24 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                     }
 
                 }
-            }else{
+            } else {
                 query = {};
             }
 
             //Run the Method 
             try {
-    
+
                 let classMethod = methodClass.methods,
-                requestMethod;
-                
+                    requestMethod;
+
                 try {
-                    
-                    requestMethod = classMethod.filter( (mth:{ name:string, method:string }) => {
+
+                    requestMethod = classMethod.filter((mth: { name: string, method: string }) => {
                         return segmentedPath[3] === mth.name && method === mth.method
                     });
 
                 } catch (error) {
-                    
+
                     PayloadHelper.renderObject({
                         headCode: 500,
                         message: 'Endpoint Unavailable',
@@ -290,36 +320,36 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                 }
 
 
-                if(requestMethod.length > 0){
+                if (requestMethod.length > 0) {
 
-                    if(
+                    if (
                         method?.toLowerCase() === 'get'
                         || method?.toLowerCase() === 'head'
-                    ){
-                        if(__Stoat.hasQuery === 1){
+                    ) {
+                        if (__Stoat.hasQuery === 1) {
                             query = query;
                         }
                     }
 
-                    if(
+                    if (
                         Object.keys(query).length > 0
-                    ){
+                    ) {
                         let queryKeys = Object.keys(query);
                         queryKeys.forEach(k => {
                             requestData[k] = query[k];
                         })
                     }
-                    
+
                     let validCallBack = 0; //Valid callback variable to ensure we dont resend 
                     const runMethod = methodClass[segmentedPath[3]](
                         {
-                            body : requestData,
-                            header : headers,
-                            query : query
+                            body: requestData,
+                            header: headers,
+                            query: query
                         }
                         ,
                         //If its callback function then run it here
-                        (callback:Obj) => {
+                        (callback: Obj) => {
                             //Send Reponse to User
                             validCallBack = 1;
                             PayloadHelper.renderObject(callback, response);
@@ -327,35 +357,35 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                     );
 
                     // else if not a callback function but a return function we shoudl check if its a promise or a normal function
-                    if(runMethod instanceof Promise ){
+                    if (runMethod instanceof Promise) {
                         const feedbackResponse = await runMethod;
                         //Send Reponse to User
                         PayloadHelper.renderObject(feedbackResponse, response);
-                    }else{
+                    } else {
                         //Send Reponse to User
                         // if(validCallBack === 0){
-                        if(
+                        if (
                             validCallBack === 0
                             && runMethod !== undefined
-                        ){
+                        ) {
                             PayloadHelper.renderObject(runMethod, response);
                         }
                     }
 
-                    
 
-                }else{
+
+                } else {
                     PayloadHelper.renderObject({
-                        headCode : 406,
-                        message : "Invalid Edpoint Method",
-                        status : 2,
-                        code : 'C007-406'
+                        headCode: 406,
+                        message: "Invalid Edpoint Method",
+                        status: 2,
+                        code: 'C007-406'
                     }, response);
                 }
-                
+
             } catch (error) {
                 // log(error);
-    
+
                 PayloadHelper.renderObject({
                     headCode: 500,
                     message: 'Error Processing Request',
@@ -366,11 +396,11 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                 return;
             }
         } else {
-            
-            if (method === 'get'){
+
+            if (method === 'get') {
 
                 let file = path;
-                
+
                 if (file === '' || file === '/') {
                     file = 'index.html';
                 }
@@ -387,23 +417,23 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                     targetFile = targetFile[(targetFile.length - 1)];
 
                     if (targetFile === 'favicon.ico') {
-                        PayloadHelper.renderFile(`${_s.misc.rootPath}/${paths.config}/Public/favicon.ico`, response); 
+                        PayloadHelper.renderFile(`${_s.misc.rootPath}/${paths.config}/Public/favicon.ico`, response);
                     } else {
                         PayloadHelper.renderFile(notFoundPage, response);
                     }
 
                 }
 
-                
 
-            } else{
+
+            } else {
                 PayloadHelper.renderObject({
                     headCode: 406,
                     message: 'Invalid Endpoint, Please verify and try again',
                     status: 2,
                     code: 'C009-406'
                 },
-                response);
+                    response);
                 return;
             }
 
@@ -420,7 +450,7 @@ module.exports = async (request:HttpRequest, response:HttpResponse) => {
                 status: 2,
                 code: 'C003-406'
             },
-            response);
+                response);
             return;
         }
 

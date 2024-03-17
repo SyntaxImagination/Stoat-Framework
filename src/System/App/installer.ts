@@ -8,7 +8,7 @@
 import { log } from "console";
 import { execSync } from 'child_process';
 
-async function checkPackage(moduleName: string){
+async function checkPackage(moduleName: string) {
     try {
         require.resolve(moduleName);
         return true;
@@ -17,11 +17,11 @@ async function checkPackage(moduleName: string){
     }
 }
 
-async function installPackage(moduleName: string, type: number){
+async function installPackage(moduleName: string, type: number) {
     log(`Stoat Installing : ${moduleName}`);
 
     let runInstall = `npm install ${moduleName}`;
-    if (type === 1) {
+    if (!(type) || type === 0) {
         runInstall = `${runInstall} --save`;
     } else {
         runInstall = `${runInstall} --save-dev`;
