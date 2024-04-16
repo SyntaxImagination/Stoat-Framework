@@ -5,6 +5,12 @@ const path = require('path');
 const readFileSync = require('fs').readFileSync;
 const log = require('console').log;
 
+// If __staotData is not defined, define it and set __stoatData.appType set it to "js"
+if (typeof __stoatData === "undefined") {
+      global.__stoatData = {};
+      __stoatData.appType = "js";
+}
+
 //Set Defaults
 _s.misc.rootPath = path.join(__dirname);
 _s.misc.rootParent = _s.misc.rootPath;
@@ -63,7 +69,7 @@ if (
                                     runConnection();
                               } catch (error) {
                                     var runDBInstaller = require(_s.misc.rootPath + "/" + _s.paths.model);
-                                    runDBInstaller(_s.db);
+                                    runDBInstaller(_s.dbConfig);
 
                                     runConnection();
                               }

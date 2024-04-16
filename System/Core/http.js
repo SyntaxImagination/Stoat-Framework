@@ -2,7 +2,7 @@ const paths = _s.paths;
 
 const http = require("http"); 
 
-export function run(
+function run(
     net
 ){
 
@@ -26,3 +26,5 @@ export function run(
 
     }
 }
+
+module.exports = run;

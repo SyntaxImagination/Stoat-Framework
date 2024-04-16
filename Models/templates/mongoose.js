@@ -1,5 +1,5 @@
 /**
- * Name :                                                                                                                Mongoose Connector
+ * Name : Mongoose Connector
  * Description : Mongoose is a NodeJS Pakcage that enable easy MongoDB connection
  * Requirement : mongoose - npm install mongoose | yarn install mongoose  
  */
@@ -10,7 +10,7 @@ const mongoose = require("mongoose");
 let connection;
 
 module.exports = async (dbData) => {
-  _s.db[dbData.name] = {};
+  _s.db[dbData.ref] = {};
 
   async function connect() {
     try {
@@ -42,14 +42,14 @@ module.exports = async (dbData) => {
   //Define all your Schemas / Collections in this function, they will be available globally
   function makeConnections() {
     const Schema = mongoose.Schema;
-    stoat.db[dbData.name].ObjectId = mongoose.Types.ObjectId; //Object ID will always be available under same
+    stoat.db[dbData.ref].ObjectId = mongoose.Types.ObjectId; //Object ID will always be available under same
 
     //Define Collction Schemas - this is a sample, you can delete after
     const schema_sample = new Schema({
       name: String,
     });
     schema_sample.set("strict", true);
-    stoat.db[dbData.name].schema_sample = connection.model(
+    stoat.db[dbData.ref].schema_sample = connection.model(
       "schema_sample",
       schema_sample
     );
