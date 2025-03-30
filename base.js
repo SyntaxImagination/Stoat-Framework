@@ -73,6 +73,9 @@ if (
 
                                     runConnection();
                               }
+                        } else {
+                              log('Database parameters are not defined or completed');
+                              runConnection();
                         }
                   });
             } else {

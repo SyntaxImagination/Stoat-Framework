@@ -27,4 +27,6 @@ function run(
     }
 }
 
-module.exports = run;
+module.exports = {
+    run
+};

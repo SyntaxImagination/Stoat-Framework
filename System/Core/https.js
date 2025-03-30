@@ -35,4 +35,6 @@ function run(net) {
   }
 }
 
-module.exports = run;
+module.exports = {
+  run
+};
