@@ -2,9 +2,7 @@
 //  * This file act as db
 //  */
 const paths = _s.paths;
-
 const log = require("console").log;
-
 
 const copyFileSync = require("fs").copyFileSync;
 const readdirSync = require("fs").readdirSync;
