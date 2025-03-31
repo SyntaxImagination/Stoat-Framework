@@ -18,7 +18,7 @@ module.exports = async (dbData) => {
             try {
                   //This is basic connection and can be extended further
                   const options = {
-                        user: dbData.username || "root",
+                        user: dbData.user || "root",
                         host: dbData.url || "localhost",
                         database: dbData.name,
                         password: dbData.password || "",

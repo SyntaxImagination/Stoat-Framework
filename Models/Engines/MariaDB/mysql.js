@@ -17,7 +17,7 @@ module.exports = async (dbData) => {
                   //This is basic connection and can be extended further
                   const options = {
                         host: dbData.url || "localhost",
-                        user: dbData.username || "root",
+                        user: dbData.user || "root",
                         password: dbData.password || "",
                         database: dbData.name,
                         port: dbData.port || 3306,
