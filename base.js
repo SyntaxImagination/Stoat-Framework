@@ -2,7 +2,7 @@
 require('stoatcore');
 
 const path = require('path');
-const readFileSync = require('fs').readFileSync;
+const {readFileSync} = require('fs');
 const log = require('console').log;
 
 // If __staotData is not defined, define it and set __stoatData.appType set it to "js"

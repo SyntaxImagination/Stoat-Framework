@@ -48,7 +48,7 @@ async function initDB(dbRef) {
                   log(error);
                   log("Error Running Process");
 
-                  return false;  s
+                  return false;
             }
       }
 

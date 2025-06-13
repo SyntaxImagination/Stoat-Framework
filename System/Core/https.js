@@ -1,6 +1,6 @@
 const https = require("https");
 const http = require("http");
-const fs = require("fs");
+const {readFileSync} = require("fs");
 
 const paths = stoat.paths;
 
@@ -9,10 +9,10 @@ function run(net) {
 
   if (!isNaN(net["data"].port)) {
     const sslOptions = {
-      key: fs.readFileSync(
+      key: readFileSync(
         `${_s.misc.rootParent}/${paths.others}/SSL/${net.certKey}`
       ),
-      cert: fs.readFileSync(
+      cert: readFileSync(
         `${_s.misc.rootParent}/${paths.others}/SSL/${net.certPem}`
       ),
     };
