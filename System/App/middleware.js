@@ -328,7 +328,7 @@ module.exports = async (request, response) => {
           file = "index.html";
         }
 
-        const filePath = `${paths._PublicPath}/${file}`;
+        const filePath = `${paths.view}/${file}`;
         const fileCheck = fs.existsSync(filePath);
 
         if (fileCheck === true) {
