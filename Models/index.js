@@ -58,22 +58,21 @@ module.exports = async (databases, callback = ({}) => {}) => {
       async function runDBFile(db, index) {
             //Check if _s.db has db already defined else create a contructor to hold the db
             if (!(db.schema in _s.db)) {
-                  _s.db[db.schema] = function () {};
-
-                  _s.db[db.schema].prototype.config = db;
+                  _s.db[db.ref] = function () {};
+                  _s.db[db.ref].prototype.config = db;
             }
 
             //Now Run the DB File in Templates to create
             let dbFile = `${modelsPath}/Engines/${db.type}/${db.package}.${type}`;
 
             //Set Up Schema
-            if ("schema" in db) {
+            if ("schemaFile" in db) {
                   let schemaFile = "";
 
-                  if (db.schema.includes(".json")) {
-                        schemaFile = `${schemaFolder}/${db.schema}`;
+                  if (db.schemaFile.includes(".json")) {
+                        schemaFile = `${schemaFolder}/${db.schemaFile}`;
                   } else {
-                        schemaFile = `${schemaFolder}/${db.schema}.json`;
+                        schemaFile = `${schemaFolder}/${db.schemaFile}.json`;
                   }
 
                   try {
@@ -82,9 +81,9 @@ module.exports = async (databases, callback = ({}) => {}) => {
                         const { initDB } = require(dbFile);
 
                         //Set Schema to the db
-                        _s.db[db.schema].prototype.schema = schema;
+                        _s.db[db.ref].prototype.schema = schema;
 
-                        initDB(db.schema);
+                        await initDB(db);
                   } catch (error) {
                         log(error);
                         log(
