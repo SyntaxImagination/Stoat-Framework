@@ -322,7 +322,7 @@ module.exports = async (request, response) => {
                               const runMethod = methodClass[segmentedPath[3]](
                                     {
                                           body: requestData,
-                                          header: headers,
+                                          headers: headers,
                                           query: query,
                                     },
                                     (callback) => {
