@@ -306,7 +306,7 @@ module.exports = async (request, response) => {
                                     method.toLowerCase() === "get" ||
                                     method.toLowerCase() === "head"
                               ) {
-                                    if (__Stoat.hasQuery === 1) {
+                                    if (__Stoat.hasQuery === 1) { 
                                           query = query;
                                     }
                               }
@@ -324,6 +324,7 @@ module.exports = async (request, response) => {
                                           body: requestData,
                                           headers: headers,
                                           query: query,
+                                          method: method.toLowerCase(),
                                     },
                                     (callback) => {
                                           validCallBack = 1;
