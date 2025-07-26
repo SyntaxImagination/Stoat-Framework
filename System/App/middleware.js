@@ -9,7 +9,6 @@ const url = require("url");
 const http = require("http");
 const console = require("console");
 const Payload = require("../Helpers/Payload");
-const log = console.log;
 
 const paths = _s.paths,
       config = _s.config,
@@ -143,7 +142,16 @@ module.exports = async (request, response) => {
       });
 
       response.setHeader("Access-Control-Allow-Method", allowedMethods);
-      response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      // Use allowedHeaders from config.requestConf.allowedHeaders
+      let allowedHeaders = "";
+      if (Array.isArray(config.requestConf.allowedHeaders)) {
+            allowedHeaders = config.requestConf.allowedHeaders.join(", ");
+      } else if (typeof config.requestConf.allowedHeaders === "string") {
+            allowedHeaders = config.requestConf.allowedHeaders;
+      } else {
+            allowedHeaders = "Content-Type";
+      }
+      response.setHeader("Access-Control-Allow-Headers", allowedHeaders);
       response.setHeader("Access-Control-Allow-Credential", String(true));
 
       if (method === "get" || method === "head") {
@@ -280,11 +288,7 @@ module.exports = async (request, response) => {
                               requestMethod = classMethod.filter((mth) => {
                                     return (
                                           segmentedPath[3] === mth.name &&
-                                          (method === mth.method ||
-                                                method.toUpperCase() ===
-                                                      mth.method ||
-                                                method.toLowerCase() ===
-                                                      mth.method)
+                                          method === mth.method
                                     );
                               });
                         } catch (error) {
@@ -306,7 +310,7 @@ module.exports = async (request, response) => {
                                     method.toLowerCase() === "get" ||
                                     method.toLowerCase() === "head"
                               ) {
-                                    if (__Stoat.hasQuery === 1) { 
+                                    if (__Stoat.hasQuery === 1) {
                                           query = query;
                                     }
                               }
@@ -322,9 +326,8 @@ module.exports = async (request, response) => {
                               const runMethod = methodClass[segmentedPath[3]](
                                     {
                                           body: requestData,
-                                          headers: headers,
+                                          header: headers,
                                           query: query,
-                                          method: method.toLowerCase(),
                                     },
                                     (callback) => {
                                           validCallBack = 1;
@@ -364,6 +367,7 @@ module.exports = async (request, response) => {
                               );
                         }
                   } catch (error) {
+                        log(error);
                         PayloadHelper.renderObject(
                               {
                                     headCode: 500,
@@ -384,7 +388,7 @@ module.exports = async (request, response) => {
                               file = "index.html";
                         }
 
-                        const filePath = `${paths.view}/${file}`;
+                        const filePath = `${paths._PublicPath}/${file}`;
                         const fileCheck = fs.existsSync(filePath);
 
                         if (fileCheck === true) {
