@@ -91,13 +91,13 @@ All six Net bugs and both Helper bugs have been fixed directly in the local `Sto
 ---
 
 ### SC-F1 — WebSocket support
-- [ ] **Status:** Not started
-- **Files:** `StoatCore/Net/index.js`, `System/Core/` (new `ws.js` / `wss.js`), `base.js`
-- **Description:** stoatcore's Net module has `// WebSocket Coming Soon`. `bin/.config` already exposes `ws` / `wss` net entries but `base.js` has `// @TODO : Fix the other types` and does nothing with them.
-- **Scope:**
-  1. Add WebSocket server support to stoatcore (or `System/Core/ws.js` in the framework)
-  2. Wire up `ws` and `wss` entries in `base.js` `runConnection()` loop
-  3. Define a controller dispatch pattern for WebSocket messages
+- [x] **Status:** Implemented in `System/Core/ws.js`
+- **Files:** `System/Core/ws.js` (new), `System/Core/http.js`, `System/Core/https.js`, `base.js`, `bin/.config`
+- **Description:** Full WebSocket server with controller dispatch. HTTP and WS can share the same port.
+- **Implementation:**
+  1. `System/Core/ws.js` — auto-installs the `ws` package, creates WS server (shared or standalone port), dispatches messages to the same controller classes used by HTTP
+  2. `base.js` `runConnection()` — two-pass loop: HTTP/HTTPS first, then WS/WSS with server reference passed in
+  3. `bin/.config` — `ws` and `wss` entries updated with `"port": 0` (shared) or a specific port (standalone)
 
 ---
 
@@ -249,7 +249,7 @@ All six Net bugs and both Helper bugs have been fixed directly in the local `Sto
 | SC-6 | Net: body resolution on data vs end | stoatcore | Medium | [x] |
 | SC-7 | Helper: writeBase64ToFile missing imports | stoatcore | Medium | [x] |
 | SC-8 | Encryption: 3DES + MD5 weak crypto | stoatcore | High | [x] |
-| SC-F1 | WebSocket support | stoatcore + framework | Low | [ ] |
+| SC-F1 | WebSocket support | stoatcore + framework | Low | [x] |
 | SC-F2 | CLI scaffolding tool | stoatcore | Low | [ ] |
 | SC-F3 | `_s.net` streaming support | stoatcore + framework | Low | [ ] |
 | SEC-1 | Path traversal — controller loading | Framework | Critical | [x] |

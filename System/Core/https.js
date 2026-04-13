@@ -32,6 +32,8 @@ function run(net) {
         server.listen(port, () => {
             console.log(`Stoat HTTPS Started on ${new Date()} | Port: ${port}`);
         });
+
+        return server;
     }
 }
 

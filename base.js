@@ -88,37 +88,42 @@ async function init() {
                   runConnection();
 
                   function runConnection() {
+                        var httpServer  = null;
+                        var httpsServer = null;
+
+                        // Pass 1: start HTTP / HTTPS and capture server references
+                        // (WS needs these references to share the same port)
                         configData.net.forEach(function (net) {
                               for (var key in net) {
-                                    if (key !== "data") {
-                                          //HTTP
-                                          if (
-                                                key === "http" &&
-                                                net[key] === true
-                                          ) {
-                                                var httpModule = require("./" +
-                                                      _s.paths.config +
-                                                      "/Core/http.js");
+                                    if (key === "http" && net[key] === true) {
+                                          var httpModule = require("./" +
+                                                _s.paths.config +
+                                                "/Core/http.js");
+                                          httpServer = httpModule.run(net);
+                                    } else if (key === "https" && net[key] === true) {
+                                          var httpsModule = require("./" +
+                                                _s.paths.config +
+                                                "/Core/https.js");
+                                          httpsServer = httpsModule.run(net);
+                                    }
+                              }
+                        });
 
-                                                httpModule.run(net);
-                                          }
-
-                                          //HTTPS
-                                          if (
-                                                key === "https" &&
-                                                net[key] === true
-                                          ) {
-                                                var httpsModule = require("./" +
-                                                      _s.paths.config +
-                                                      "/Core/https.js");
-
-                                                httpsModule.run(net);
-                                          }
-                                          //@TODO : Fix the other types
-
-                                          //WEBSOCKET
-
-                                          //SOCKETIO
+                        // Pass 2: start WebSocket / WebSocket Secure
+                        // port === 0 → attach to HTTP/HTTPS server (shared port)
+                        // port  > 0 → standalone WS server on that port
+                        configData.net.forEach(function (net) {
+                              for (var key in net) {
+                                    if (key === "ws" && net[key] === true) {
+                                          var wsModule = require("./" +
+                                                _s.paths.config +
+                                                "/Core/ws.js");
+                                          wsModule.run(net, httpServer);
+                                    } else if (key === "wss" && net[key] === true) {
+                                          var wssModule = require("./" +
+                                                _s.paths.config +
+                                                "/Core/ws.js");
+                                          wssModule.run(net, httpsServer);
                                     }
                               }
                         });

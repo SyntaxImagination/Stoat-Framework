@@ -33,7 +33,7 @@ A slim Node.js/Bun framework designed with a focus on minimal package usage and 
     - [Database](#database)
     - [Helper](#helper)
     - [MimeTypes](#mimetypes)
-12. [HTTP & HTTPS Servers](#http--https-servers)
+12. [HTTP, HTTPS & WebSocket Servers](#http-https--websocket-servers)
 13. [Package Auto-Installer](#package-auto-installer)
 14. [Origin & CORS Security](#origin--cors-security)
 15. [Error Codes Reference](#error-codes-reference)
@@ -116,9 +116,10 @@ project-root/
 │   │   └── installer.js      # npm / bun auto-installer
 │   ├── Core/
 │   │   ├── http.js           # HTTP server
-│   │   └── https.js          # HTTPS server
+│   │   ├── https.js          # HTTPS server
+│   │   └── ws.js             # WebSocket server (WS + WSS)
 │   ├── Net/
-│   │   └── index.js          # Fixed outbound HTTP/HTTPS client (patches _s.net)
+│   │   └── index.js          # Outbound HTTP/HTTPS client
 │   └── Helpers/
 │       └── Payload.js        # Request/response processor
 ├── Engine/                   # Controllers (user-defined)
@@ -186,8 +187,12 @@ The entire runtime behaviour of the framework is controlled by a single JSON fil
       }
     },
     {
-      "ws": false,           // WebSocket (planned)
-      "data": {}
+      "ws": false,           // WebSocket over HTTP
+      "data": { "port": 0 } // 0 = share the HTTP server port; >0 = standalone port
+    },
+    {
+      "wss": false,          // WebSocket over HTTPS
+      "data": { "port": 0 } // 0 = share the HTTPS server port; >0 = standalone port
     }
   ],
 
@@ -689,7 +694,7 @@ module.exports = [
 
 ---
 
-## HTTP & HTTPS Servers
+## HTTP, HTTPS & WebSocket Servers
 
 ### HTTP — [System/Core/http.js](System/Core/http.js)
 
@@ -713,7 +718,103 @@ Creates an `https.Server` using TLS certificate files from `OtherFiles/SSL/`. Th
 }]
 ```
 
-> WebSocket (`ws`) and `wss` support are planned but not yet implemented.
+### WebSocket — [System/Core/ws.js](System/Core/ws.js)
+
+**Package:** `ws` (auto-installed on first use)
+
+Two modes — controlled by `net[].data.port`:
+
+| `port` value | Behaviour |
+|---|---|
+| `0` (default) | WS upgrades handled on the **same port** as HTTP/HTTPS (no extra port) |
+| `> 0` | Standalone WS server on that port |
+
+```jsonc
+// bin/.config — shared port with HTTP (most common)
+"net": [
+    { "http": true, "data": { "port": 5000 } },
+    { "ws":   true, "data": { "port": 0 } }
+]
+
+// bin/.config — WSS sharing the HTTPS port
+"net": [
+    { "https": true, "certKey": "server.key", "certPem": "server.crt", "data": { "port": 443 } },
+    { "wss":   true, "data": { "port": 0 } }
+]
+
+// bin/.config — WS on its own port
+"net": [
+    { "http": true, "data": { "port": 5000 } },
+    { "ws":   true, "data": { "port": 5001 } }
+]
+```
+
+#### Message format (client → server)
+
+```json
+{
+    "version":  "v1",
+    "endpoint": "chat",
+    "method":   "sendMessage",
+    "data":     { "text": "Hello" }
+}
+```
+
+`version` defaults to `"v1"` if omitted. `endpoint` and `method` map to the same controller classes used by HTTP — the **same controller handles both protocols**.
+
+#### Response format (server → client)
+
+```json
+{ "status": 1, "message": "...", "data": {}, "errorcode": "" }
+```
+
+#### Controller example
+
+```js
+// Engine/v1/chat.js
+class chat {
+    get methods() {
+        return [
+            { name: "sendMessage", method: "post" },
+            { name: "history",     method: "get"  },
+        ];
+    }
+
+    sendMessage(request, callback) {
+        const { body, ws, wss } = request;
+
+        // Broadcast to all connected clients
+        wss.clients.forEach((client) => {
+            if (client.readyState === 1) {   // 1 = WebSocket.OPEN
+                client.send(JSON.stringify({ event: "message", data: body }));
+            }
+        });
+
+        callback({ status: 1, message: "Broadcast sent", data: body });
+    }
+}
+
+module.exports = { chat };
+```
+
+The `request` object for WS methods carries two extra fields:
+
+| Field | Description |
+|---|---|
+| `request.ws` | The individual WebSocket client — call `ws.send()` to reply to this client only |
+| `request.wss` | The WebSocket server — iterate `wss.clients` to broadcast to all connections |
+
+#### WS error codes
+
+| Code | Trigger |
+|---|---|
+| `WS000` | Invalid JSON in message |
+| `WS001` | Missing `endpoint` or `method` field |
+| `WS002` | Unsafe path segment (path traversal guard) |
+| `WS003` | Endpoint not in route map |
+| `WS004` | Controller class not found in module |
+| `WS005` | Method not listed in `controller.methods` |
+| `WS006` | Unhandled exception during dispatch |
 
 ---
 
@@ -803,6 +904,7 @@ All framework-generated errors share the same response envelope with `status: 2`
 | `_s.__system.allowedOrigins` | Array      | Cached entries from `OtherFiles/allowedUrls.txt` |
 | `_s.__system.notFoundPage`   | String     | Resolved absolute path to 404 page (cached)      |
 | `_s.__system.routes`         | Object     | Pre-built controller map `"{version}/{name}"` → module |
+| `_s.__system.wsServer`       | Object     | Active `WebSocket.Server` instance (set when WS is enabled) |
 | `global.__stoatData`         | Object     | App-type metadata (`appType: "js"` or `"ts"`)   |
 | `global.log`                 | Function   | Alias for `console.log`                          |
 

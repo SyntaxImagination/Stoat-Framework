@@ -27,6 +27,8 @@ function run(net) {
         server.listen(port, () => {
             console.log(`Stoat HTTP Started on ${new Date()} | Port : ${port}`);
         });
+
+        return server;
     }
 }
 
