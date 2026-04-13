@@ -1,62 +1,47 @@
 /**
- * Name : MySQL Connector                                                                                                        MySQL Connector
- * Description : MySQL is a NodeJS Pakcage that enable easy MySQL connection
- * Requirement : mysql - npm install mysql | yarn install mysql  
+ * Name        : MariaDB Connector
+ * Description : Connection pool for MariaDB databases.
+ * Requirement : mysql — npm install mysql | bun add mysql
+ *
+ * PERF-7: upgraded from createConnection() to createPool() — a dropped
+ *         connection no longer crashes in-flight queries; the pool
+ *         automatically reconnects and queues requests when all connections
+ *         are busy.
  */
 
-const log = require("console").log;
+const log   = require("console").log;
 const mysql = require("mysql");
 
-let connection;
+async function initDB(dbData) {
+    _s.db[dbData.ref] = {};
 
-async function initDB (dbData){ 
-      _s.db[dbData.ref] = {};
+    try {
+        const pool = mysql.createPool({
+            host              : dbData.url      || "localhost",
+            user              : dbData.username || dbData.user || "root",
+            password          : dbData.password || "",
+            database          : dbData.name,
+            port              : dbData.port     || 3306,
+            connectionLimit   : dbData.connectionLimit   || 10,
+            waitForConnections: true,
+            queueLimit        : 0,
+        });
 
-      //Connection to the database
-      async function connect() {
-            try {
-                  //This is basic connection and can be extended further
-                  const options = {
-                        host: dbData.url || "localhost",
-                        user: dbData.username || "root",
-                        password: dbData.password || "",
-                        database: dbData.name,
-                        port: dbData.port || 3306,
-                  };
-
-                  //Make Connection
-                  connection = await mysql.createConnection(options);
-                  // log(connection); 
-
-                  //Check if connection is successful
-                  connection.connect((err) => {
-                        if (err) {
-                              log(err);
-                              log("Unable to connect to Database");
-                              return false;
-                        } else {
-                              log("Connected to Database");
-                              makeConnections();
-                        }
-                  });
-
-            } catch (error) {
-                  log(error);
-                  log("Unable to connect to Database");
-
-                  return false;
+        // Verify pool connectivity on startup
+        pool.getConnection((err, connection) => {
+            if (err) {
+                log(`MariaDB: Unable to connect to ${dbData.name} —`, err.message);
+            } else {
+                log(`MariaDB: Connected to ${dbData.name} (pool, limit: ${dbData.connectionLimit || 10})`);
+                connection.release();
             }
-      }
+        });
 
-      //Connect
-      await connect();
+        stoat.db[dbData.ref].connection = pool;
 
-      //Make Connection part of our Stoat Object so it can be accessible globally
-      function makeConnections() {
-            stoat.db[dbData.ref].connection = connection;
-      }
-};
-
-module.exports = {
-      initDB
+    } catch (error) {
+        log("MariaDB: Unexpected error during pool setup —", error.message);
+    }
 }
+
+module.exports = { initDB };

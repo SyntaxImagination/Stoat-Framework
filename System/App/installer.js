@@ -8,6 +8,8 @@
 const { log } = require("console"),
   { execSync } = require("child_process");
 
+const isBun = typeof Bun !== "undefined";
+
 function checkPackage(moduleName) {
   try {
     require.resolve(moduleName);
@@ -20,11 +22,13 @@ function checkPackage(moduleName) {
 function installPackage(moduleName, type) {
   log(`Stoat Installing : ${moduleName}`);
 
-  let runInstall = `npm install ${moduleName}`;
-  if (!type || type === 0) {
-    runInstall = `${runInstall} --save`;
+  let runInstall;
+  if (isBun) {
+    runInstall = `bun add ${moduleName}`;
+  } else if (!type || type === 0) {
+    runInstall = `npm install ${moduleName} --save`;
   } else {
-    runInstall = `${runInstall} --save-dev`;
+    runInstall = `npm install ${moduleName} --save-dev`;
   }
 
   try {

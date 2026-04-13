@@ -63,16 +63,16 @@ module.exports = async (databases, callback = ({}) => {}) => {
             }
 
             //Now Run the DB File in Templates to create
-            let dbFile = `${modelsPath}/Engines/${db.type}/${db.package}.${type}`;
+            let dbFile = `${modelsPath}/Engines/${db.engine}/${db.package}.${type}`;
 
             //Set Up Schema
-            if ("schemaFile" in db) {
+            if ("file" in db) {
                   let schemaFile = "";
 
-                  if (db.schemaFile.includes(".json")) {
-                        schemaFile = `${schemaFolder}/${db.schemaFile}`;
+                  if (db.file.includes(".json")) {
+                        schemaFile = `${schemaFolder}/${db.file}`;
                   } else {
-                        schemaFile = `${schemaFolder}/${db.schemaFile}.json`;
+                        schemaFile = `${schemaFolder}/${db.file}.json`;
                   }
 
                   try {
@@ -83,7 +83,7 @@ module.exports = async (databases, callback = ({}) => {}) => {
                         //Set Schema to the db
                         _s.db[db.ref].prototype.schema = schema;
 
-                        await initDB(db);
+                        await initDB(db.ref);
                   } catch (error) {
                         log(error);
                         log(

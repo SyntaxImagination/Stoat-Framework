@@ -2,3 +2,6 @@ js_old/
 .foreverignore
 node_modules/
 package-lock.json
+StoatCore/
+.claude/
+.session

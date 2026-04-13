@@ -1,159 +1,148 @@
 /**
- * Module : Core Payload Helper
- * Desc : This Helper will makes it possible to process payloads from the Core
- * Updated : 14th March, 2023
+ * Module  : Core Payload Helper
+ * Desc    : Processes inbound request data and writes outbound responses.
  *
- *  The Request Module is needed to handle all requests
- *  Manage what comes in and help format in the right things where needed
- *  Also it will proccess the output and also format things as they go output
- *  This will make proccesses as fast as possible and make our application be stateless, thin and light
- *
+ * PERF-5: gzip compression added to renderObject() and renderFile().
+ *         Responses are compressed when the client sends Accept-Encoding: gzip.
+ *         Uses only the native `zlib` module — no extra packages.
  */
 
-const fs = require("fs");
-const url = require("url");
-const StringDecoder = require("string_decoder").StringDecoder;
-const http = require("http");
-const console = require("console");
+const fs             = require("fs");
+const url            = require("url");
+const { gzipSync }   = require("zlib");
+const StringDecoder  = require("string_decoder").StringDecoder;
+const console        = require("console");
 
 const mimetypes = _s.__system.mimeTypes;
 
 class Payload {
-      constructor() {}
+    constructor() {}
 
-      __setRenderHeader(data, response) {
-            response.setHeader("ContentType", "text/plain");
+    // ── Internal helpers ─────────────────────────────────────────────
 
-            for (let x = 0; x < mimetypes.length; x++) {
-                  if (data.indexOf(mimetypes[x].file) > -1) {
-                        response.setHeader(
-                              "Content-Type",
-                              mimetypes[x].content
-                        );
-                  }
+    __setRenderHeader(filePath, response) {
+        response.setHeader("Content-Type", "application/octet-stream");
+        for (let x = 0; x < mimetypes.length; x++) {
+            if (mimetypes[x].file.some((ext) => filePath.endsWith(ext))) {
+                response.setHeader("Content-Type", mimetypes[x].content);
+                break;
             }
-      }
+        }
+    }
 
-      async getRequestData(request) {
-            let method = request.method?.toLowerCase();
-            let requestBody = {};
+    __acceptsGzip(response) {
+        const accepts = (response.req?.headers?.["accept-encoding"] || "").toLowerCase();
+        return accepts.includes("gzip");
+    }
 
-            if (method === "get" && request.query) {
-                  let parsedURL = url.parse(request.url, true);
-                  requestBody = parsedURL.query;
+    // ── Request ───────────────────────────────────────────────────────
 
-                  return requestBody;
+    async getRequestData(request) {
+        const method = request.method?.toLowerCase();
+
+        if (method === "get" && request.query) {
+            const parsedURL = url.parse(request.url, true);
+            return parsedURL.query;
+        }
+
+        const decoder = new StringDecoder("utf-8");
+        let buffer    = "";
+
+        return new Promise((resolve) => {
+            request.on("data", (data) => {
+                buffer += decoder.write(data);
+            });
+
+            request.on("end", () => {
+                let requestBody = {};
+
+                if (buffer !== "") {
+                    try {
+                        requestBody = JSON.parse(buffer);
+                    } catch (_) {
+                        requestBody = { payload: buffer };
+                    }
+                }
+
+                resolve(requestBody);
+            });
+        });
+    }
+
+    // ── Response ──────────────────────────────────────────────────────
+
+    async renderFile(filePath, response) {
+        this.__setRenderHeader(filePath, response);
+
+        let file;
+        try {
+            file = fs.readFileSync(filePath);
+        } catch (_) {
+            response.setHeader("Content-Type", "application/json");
+            response.writeHead(500);
+            response.end(JSON.stringify({ status: 2, message: "Error Reading File" }));
+            return false;
+        }
+
+        if (file.length === 0) {
+            response.setHeader("Content-Type", "application/json");
+            response.writeHead(500);
+            response.end(JSON.stringify({ status: 2, message: "Empty File" }));
+            return;
+        }
+
+        // PERF-5: compress if client accepts gzip
+        if (this.__acceptsGzip(response)) {
+            response.setHeader("Content-Encoding", "gzip");
+            response.setHeader("Vary", "Accept-Encoding");
+            response.end(gzipSync(file));
+        } else {
+            response.end(file);
+        }
+    }
+
+    async renderObject(obj, response) {
+        try {
+            response.setHeader("Content-Type", "application/json");
+
+            if (!obj.hasOwnProperty("data"))   obj.data   = {};
+            if (!obj.hasOwnProperty("status"))  obj.status = 2;
+            if (!obj.hasOwnProperty("code"))    obj.code   = "";
+
+            if (obj.hasOwnProperty("contentType")) {
+                response.setHeader("Content-Type", obj.contentType);
+            }
+
+            const body = JSON.stringify({
+                status    : obj.status,
+                message   : obj.message,
+                data      : obj.data,
+                errorcode : obj.code,
+            });
+
+            // PERF-5: compress if client accepts gzip
+            if (this.__acceptsGzip(response)) {
+                response.setHeader("Content-Encoding", "gzip");
+                response.setHeader("Vary", "Accept-Encoding");
+                response.writeHead(obj.headCode);
+                response.end(gzipSync(body));
             } else {
-                  let decoder = new StringDecoder("utf-8");
-                  let buffer = "";
-
-                  return new Promise((resolve) => {
-                        request.on("data", (data) => {
-                              buffer += decoder.write(data);
-                        });
-
-                        request.on("end", () => {
-                              if (buffer != "") {
-                                    try {
-                                          requestBody = JSON.parse(buffer);
-                                    } catch (error) {
-                                          console.log(
-                                                "Error parsing JSON:",
-                                                error
-                                          );
-                                          requestBody = {
-                                                payload: buffer,
-                                          };
-                                    }
-                              }
-
-                              return resolve(requestBody);
-                        });
-                  });
-            }
-      }
-
-      async renderFile(path, response) {
-            this.__setRenderHeader(path, response);
-
-            const fullpath = `${path}`;
-            let file;
-
-            try {
-                  file = fs.readFileSync(fullpath);
-            } catch (error) {
-                  console.log(error);
-
-                  response.setHeader("Content-Type", "application/json");
-                  response.writeHead(500);
-                  response.end(
-                        JSON.stringify({
-                              status: 2,
-                              message: "Error Reading File",
-                        })
-                  );
-                  return false;
+                response.writeHead(obj.headCode);
+                response.end(body);
             }
 
-            if (file.length > 0) {
-                  response.end(file);
-            } else {
-                  response.setHeader("Content-Type", "application/json");
-                  response.writeHead(500);
-                  response.end(
-                        JSON.stringify({
-                              status: 2,
-                              message: "Empty File",
-                        })
-                  );
-            }
-      }
-
-      async renderObject(obj, response) {
-            try {
-                  response.setHeader("Content-Type", "application/json");
-
-                  if (!obj.hasOwnProperty("data")) {
-                        obj.data = {};
-                  }
-
-                  if (!obj.hasOwnProperty("status")) {
-                        obj.status = 2;
-                  }
-
-                  if (!obj.hasOwnProperty("code")) {
-                        obj.code = "";
-                  }
-
-                  if (obj.hasOwnProperty("contentType")) {
-                        response.setHeader("Content-Type", obj.contentType);
-                  }
-
-                  response.writeHead(obj.headCode);
-                  response.end(
-                        JSON.stringify({
-                              status: obj.status,
-                              message: obj.message,
-                              data: obj.data,
-                              errorcode: obj.code,
-                        })
-                  );
-            } catch (error) {
-                  console.log(error);
-
-                  setTimeout(() => {
-                        response.writeHead(500);
-                        response.end(
-                              JSON.stringify({
-                                    status: 2,
-                                    message: "Response Error",
-                                    data: {},
-                                    errorcode: "P000",
-                              })
-                        );
-                  }, 2500);
-            }
-      }
+        } catch (error) {
+            console.log(error);
+            setTimeout(() => {
+                try {
+                    response.writeHead(500);
+                    response.end(
+                        JSON.stringify({ status: 2, message: "Response Error", data: {}, errorcode: "P000" })
+                    );
+                } catch (_) {}
+            }, 2500);
+        }
+    }
 }
 
 module.exports = Payload;
