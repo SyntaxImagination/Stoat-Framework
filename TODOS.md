@@ -11,7 +11,8 @@ Legend: `[F]` = StoatFramework repo · `[SC]` = stoatcore repo · `[BOTH]` = coo
 
 All six Net bugs and both Helper bugs have been fixed directly in the local `StoatCore/` source
 (which is nested in the repo and ignored by the parent `.gitignore`).
-`base.js` now loads `./StoatCore/core.js` directly — no patch layer required.
+`StoatCore/` is bundled into every new project via `stoat init` and referenced as
+`"stoatcore": "file:./StoatCore"` so all projects get the fixed v1.1.1 automatically.
 
 ---
 
@@ -102,26 +103,53 @@ All six Net bugs and both Helper bugs have been fixed directly in the local `Sto
 ---
 
 ### SC-F2 — CLI scaffolding tool
-- [ ] **Status:** Not started
-- **Files:** new `StoatCore/cli/` or standalone `stoat-cli` package
-- **Description:** stoatcore README lists CLI as a pending feature. No create-project, generate-controller, or generate-schema commands exist.
-- **Scope (minimum):**
-  - `stoat new <project-name>` — scaffold a new project from template
-  - `stoat make:controller <name>` — generate `Engine/v1/<name>.js`
-  - `stoat make:schema <name>` — generate `Models/Schemas/<name>.json`
+- [x] **Status:** Implemented in `CLI/`
+- **Files:** `CLI/bin/stoat.js`, `CLI/commands/init.js`, `CLI/commands/generate.js`, `CLI/lib/prompt.js`, `CLI/lib/templates.js`, `CLI/lib/scaffold.js`
+- **Description:** Full interactive CLI exposed via `stoat` binary in `package.json`.
+- **Scope delivered:**
+  - `stoat init` — interactive project scaffold: runtime (Node / Bun / Deno-soon), language (JS / TS for Bun), port, database. Copies `System/`, `Helpers/`, `Models/`, and `StoatCore/` (fixed v1.1.1) from the package.
+  - `stoat generate controller <name>` (`stoat g c <name>`) — generates a controller in `Engine/v1/` as `.js` or `.ts` (auto-detected from `tsconfig.json`)
+  - `stoat generate model <name>` (`stoat g m <name>`) — generates a JSON schema stub in `Models/Schemas/`
 
 ---
 
 ### SC-F3 — `_s.net` streaming support
-- [ ] **Status:** Not started
-- **Files:** `StoatCore/Net/index.js`
-- **Description:** The outbound HTTP client fully buffers responses before resolving. Large or streaming responses will exhaust memory.
-- **Fix:** Add a `stream` option that returns the raw `IncomingMessage` instead of buffering:
+- [x] **Status:** Implemented in `StoatCore/Net/index.js` and `System/Net/index.js`
+- **Files:** `StoatCore/Net/index.js`, `System/Net/index.js`
+- **Description:** Pass `stream: true` in params to receive the raw `IncomingMessage` instead of buffering. Resolved value: `{ statusCode, message, headers, stream: IncomingMessage }`. Caller is responsible for consuming and destroying the stream.
+- **Usage:**
   ```js
-  // Usage
-  const stream = await _s.net.get({ url: "...", stream: true });
-  stream.pipe(response);
+  const res = await _s.net.get({ url: "http://...", stream: true });
+  res.stream.pipe(writableDestination);
   ```
+
+---
+
+## TypeScript Support (`[F]` — StoatFramework)
+
+---
+
+### TS-1 — Bun TypeScript project support
+- [x] **Status:** Implemented
+- **Files:** `runStoatConfig.js`, `Models/index.js`, `CLI/lib/templates.js`
+- **Description:** Bun executes `.ts` files natively with no transpilation step.
+- **Changes:**
+  - `runStoatConfig.js` — helper loader now checks `.js` first, falls back to `.ts` (line 69)
+  - `runStoatConfig.js` — extra helper discovery now filters on `.(js|ts)` and strips both extensions
+  - `Models/index.js` — removed `__stoatData.tsDir` (was undefined); engine files always load as `.js` with `.ts` fallback via `existsSync`
+  - `CLI/lib/templates.js` — `baseTs()`, `controllerTs()`, `globalsTs()`, `tsConfig()` templates for Bun TS scaffolding
+  - Language prompt in `stoat init` only appears for Bun; Node defaults to JavaScript
+
+---
+
+### TS-2 — Deno TypeScript support
+- [x] **Status:** Implemented
+- **Files:** `CLI/lib/templates.js`, `CLI/commands/init.js`, `System/App/installer.js`
+- **Description:** Deno is ESM-first and TS-native. Uses `createRequire` in the entry file to bridge the CJS framework files into the ESM Deno context — no separate ESM System/ rewrites needed.
+- **Implementation:**
+  - `CLI/lib/templates.js` — `baseDeno()` entry template using `createRequire(import.meta.url)` to load CJS files; `denoJson()` template with `nodeModulesDir: "auto"`, `stoatcore` import map pointing to `./StoatCore/core.js`, and `deno` task definitions
+  - `CLI/commands/init.js` — Deno scaffold path: TypeScript by default, generates `deno.json` instead of `package.json`, `globals.d.ts` included, no tsconfig needed (Deno handles TS via `deno.json` compilerOptions), post-scaffold instructions show `deno run --allow-all base.ts`
+  - `System/App/installer.js` — `isDeno = typeof Deno !== "undefined"` detection; `deno add npm:<pkg>` command for auto-install
 
 ---
 
@@ -237,6 +265,34 @@ All six Net bugs and both Helper bugs have been fixed directly in the local `Sto
 
 ---
 
+## New Database Engines (`[F]` — StoatFramework)
+
+---
+
+### DB-1 — ClickHouse engine
+- [x] **Status:** Implemented in `Models/Engines/ClickHouse/clickhouse.js`
+- **Package:** `@clickhouse/client`
+- **Features:** Connection via HTTP REST, startup schema sync (CREATE TABLE IF NOT EXISTS, ADD COLUMN), `run(sql)` for queries, `insert(table, rows)` for bulk writes, raw `client` access.
+- **Sanitizer:** `_s.helpers.Database.sanitizeClickHouseData()` — SQL escaping + backtick/format-brace stripping.
+
+---
+
+### DB-2 — CouchDB engine
+- [x] **Status:** Implemented in `Models/Engines/CouchDB/nano.js`
+- **Package:** `nano`
+- **Features:** Creates database if missing, Mango index provisioning from schema, `find(selector, opts)` shorthand, raw `connection` (nano db handle) and `server` (nano instance) exposed on prototype.
+- **Sanitizer:** `_s.helpers.Database.sanitizeCouchData()` — strips `_`-prefixed CouchDB internal keys and `$`-prefixed Mango operators.
+
+---
+
+### DB-3 — Redis engine
+- [x] **Status:** Implemented in `Models/Engines/Redis/redis.js`
+- **Package:** `redis`
+- **Features:** Auto-prefixed keys via `keyPrefix`, configurable `defaultTTL`, `set/get/del/has/expire/run` methods, JSON serialization/deserialization transparent to the caller.
+- **Sanitizer:** `_s.helpers.Database.sanitizeRedisKey()` strips non-safe characters including `\r\n` (RESP framing injection); `sanitizeRedisValue()` ensures safe serialization.
+
+---
+
 ## Completion Checklist
 
 | ID | Area | Owner | Priority | Done |
@@ -250,8 +306,10 @@ All six Net bugs and both Helper bugs have been fixed directly in the local `Sto
 | SC-7 | Helper: writeBase64ToFile missing imports | stoatcore | Medium | [x] |
 | SC-8 | Encryption: 3DES + MD5 weak crypto | stoatcore | High | [x] |
 | SC-F1 | WebSocket support | stoatcore + framework | Low | [x] |
-| SC-F2 | CLI scaffolding tool | stoatcore | Low | [ ] |
-| SC-F3 | `_s.net` streaming support | stoatcore + framework | Low | [ ] |
+| SC-F2 | CLI scaffolding tool | Framework | Low | [x] |
+| SC-F3 | `_s.net` streaming support | stoatcore + framework | Low | [x] |
+| TS-1 | Bun TypeScript support | Framework | Medium | [x] |
+| TS-2 | Deno TypeScript support | Framework | Low | [x] |
 | SEC-1 | Path traversal — controller loading | Framework | Critical | [x] |
 | SEC-2 | Path traversal — static file serving | Framework | Critical | [x] |
 | SEC-3 | No request body size limit | Framework | High | [x] |
@@ -264,3 +322,6 @@ All six Net bugs and both Helper bugs have been fixed directly in the local `Sto
 | PERF-5 | Response compression via zlib | Framework | Medium | [x] |
 | PERF-6 | HTTP keep-alive timeout | Framework | Medium | [x] |
 | PERF-7 | MySQL/MariaDB connection pool | Framework | Medium | [x] |
+| DB-1 | ClickHouse engine | Framework | Medium | [x] |
+| DB-2 | CouchDB engine | Framework | Medium | [x] |
+| DB-3 | Redis engine | Framework | Medium | [x] |

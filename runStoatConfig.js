@@ -65,8 +65,12 @@ function runConfig() {
      * Only attempts require() if the file actually exists — avoids confusing
      * "Cannot find module" errors for helpers the user hasn't overridden.
      */
+    // Check .js first, fall back to .ts (Bun TS support)
     for (let key in _s.helpers) {
-        const helperFile = `${_s.misc.rootPath}/${_s.paths.helpers}/${key}.js`;
+        let helperFile = `${_s.misc.rootPath}/${_s.paths.helpers}/${key}.js`;
+        if (!existsSync(helperFile)) {
+            helperFile = `${_s.misc.rootPath}/${_s.paths.helpers}/${key}.ts`;
+        }
 
         if (existsSync(helperFile)) {
             try {
@@ -85,7 +89,8 @@ function runConfig() {
     const availableHelpers = Object.keys(_s.helpers);
 
     helperDir.forEach((fileName) => {
-        const mod = fileName.split(".")[0];
+        if (!/\.(js|ts)$/.test(fileName)) return;
+        const mod = fileName.replace(/\.(js|ts)$/, "");
 
         if (!availableHelpers.includes(mod) && mod !== "MimeTypes") {
             _s.helpers[mod] = {};

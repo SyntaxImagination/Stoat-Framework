@@ -1,8 +1,11 @@
 {
   "name": "stoatframework",
-  "version": "1.5.0",
+  "version": "1.8.0",
   "description": "A Slim NodeJS framework designed with focus on minimal usage of packages and maximum functionalities",
   "main": "dist/base.js",
+  "bin": {
+    "stoat": "./CLI/bin/stoat.js"
+  },
   "dependencies": {
     "stoatcore": "^1.0.0"
   },

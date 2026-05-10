@@ -1,12 +1,13 @@
 # Stoat Framework
 
-**Version:** 1.5.0
+**Version:** 1.8.0
 **Author:** Syntax Imagination
 **License:** ISC
 **Repository:** [SyntaxImagination/Stoat-Framework](https://github.com/SyntaxImagination/Stoat-Framework)
-**Runtimes:** Node.js 16+ · Bun 1.0+
+**Runtimes:** Node.js 16+ · Bun 1.0+ · Deno 1.28+
+**Languages:** JavaScript · TypeScript (Bun — native; Node — requires ts-node/tsx)
 
-A slim Node.js/Bun framework designed with a focus on minimal package usage and maximum native runtime functionality. Inspired by the simplicity of PHP's **CodeIgniter** and **Flight** frameworks, Stoat follows an **MVC** pattern while encouraging developers to understand and leverage the runtime at its core.
+A slim Node.js/Bun/Deno framework designed with a focus on minimal package usage and maximum native runtime functionality. Inspired by the simplicity of PHP's **CodeIgniter** and **Flight** frameworks, Stoat follows an **MVC** pattern while encouraging developers to understand and leverage the runtime at its core.
 
 ---
 
@@ -14,32 +15,37 @@ A slim Node.js/Bun framework designed with a focus on minimal package usage and 
 
 1. [Philosophy](#philosophy)
 2. [Installation](#installation)
-3. [Bun Support](#bun-support)
-4. [Project Structure](#project-structure)
-5. [Configuration (`bin/.config`)](#configuration-binconfig)
-6. [Entry Point (`base.js`)](#entry-point-basejs)
-7. [Routing & Controllers](#routing--controllers)
-8. [Request & Response](#request--response)
-9. [Middleware](#middleware)
-10. [Database Engines](#database-engines)
+3. [CLI — `stoat init` & `stoat generate`](#cli--stoat-init--stoat-generate)
+4. [Bun Support](#bun-support)
+5. [TypeScript Support](#typescript-support)
+6. [Project Structure](#project-structure)
+7. [Configuration (`bin/.config`)](#configuration-binconfig)
+8. [Entry Point (`base.js`)](#entry-point-basejs)
+9. [Routing & Controllers](#routing--controllers)
+10. [Request & Response](#request--response)
+11. [Middleware](#middleware)
+12. [Database Engines](#database-engines)
     - [MongoDB (Mongoose)](#mongodb-mongoose)
     - [MySQL](#mysql)
     - [MariaDB](#mariadb)
     - [PostgreSQL](#postgresql)
     - [QuestDB](#questdb)
-11. [Helpers](#helpers)
+    - [ClickHouse](#clickhouse)
+    - [CouchDB](#couchdb)
+    - [Redis](#redis)
+13. [Helpers](#helpers)
     - [Encryption](#encryption)
     - [Security](#security)
     - [Database](#database)
     - [Helper](#helper)
     - [MimeTypes](#mimetypes)
-12. [HTTP, HTTPS & WebSocket Servers](#http-https--websocket-servers)
-13. [Package Auto-Installer](#package-auto-installer)
-14. [Origin & CORS Security](#origin--cors-security)
-15. [Error Codes Reference](#error-codes-reference)
-16. [Global State (`_s` / `stoat`)](#global-state-_s--stoat)
-17. [Stoatcore: Source & Fixes](#stoatcore-source--fixes)
-18. [Security & Performance](#security--performance)
+14. [HTTP, HTTPS & WebSocket Servers](#http-https--websocket-servers)
+15. [Package Auto-Installer](#package-auto-installer)
+16. [Origin & CORS Security](#origin--cors-security)
+17. [Error Codes Reference](#error-codes-reference)
+18. [Global State (`_s` / `stoat`)](#global-state-_s--stoat)
+19. [Stoatcore: Source & Fixes](#stoatcore-source--fixes)
+20. [Security & Performance](#security--performance)
 
 ---
 
@@ -50,6 +56,17 @@ Stoat challenges the culture of reaching for an npm package for every task. Ever
 ---
 
 ## Installation
+
+### Using the CLI (recommended)
+
+```bash
+# Run the interactive project scaffold — no prior install needed
+npx stoatframework init
+```
+
+This launches the `stoat init` wizard. See [CLI section](#cli--stoat-init--stoat-generate) for full details.
+
+### Manual install
 
 ```bash
 # Node.js
@@ -69,14 +86,146 @@ require("stoatframework");
 
 ---
 
+## CLI — `stoat init` & `stoat generate`
+
+The Stoat CLI is bundled with the package and exposed via the `stoat` binary. It handles project scaffolding and code generation with zero additional dependencies — built entirely on native Node.js `readline`, `fs`, and `path`.
+
+### `stoat init`
+
+Interactive project scaffold. Run from any directory:
+
+```bash
+npx stoatframework init
+# or, if installed globally:
+stoat init
+```
+
+The wizard asks:
+
+| Prompt | Options | Default |
+|---|---|---|
+| Project name | Any valid directory name | `my-stoat-app` |
+| Runtime | Node · Bun · Deno | Node |
+| Language | JavaScript · TypeScript | JavaScript (Bun/Deno only — Node defaults to JS; Deno always TS) |
+| HTTP port | Any port number | `5000` |
+| Database | None · MongoDB · MySQL · MariaDB · PostgreSQL · QuestDB · ClickHouse · CouchDB · Redis | None |
+
+What gets generated in `<project-name>/`:
+
+```
+<project-name>/
+├── base.js / base.ts         ← entry point for chosen runtime + language
+├── runStoatConfig.js         ← config loader (TS-aware helper loading)
+├── bin/.config               ← pre-filled with chosen port + database
+├── StoatCore/                ← fixed stoatcore v1.1.1 (bundled)
+├── System/                   ← framework system layer (copied from package)
+├── Helpers/                  ← helper modules
+├── Models/                   ← database layer + engine files
+├── Engine/
+│   └── v1/
+│       └── home.js / home.ts ← sample controller
+├── Public/
+│   ├── index.html
+│   └── 404.html
+├── OtherFiles/
+│   └── allowedUrls.txt
+├── Uploads/
+├── FlatFiles/
+│
+│   ── Node / Bun ──────────────────────────────────────────────────────
+├── package.json              ← scripts + "stoatcore": "file:./StoatCore"
+├── globals.d.ts              ← TypeScript globals (Bun TS only)
+├── tsconfig.json             ← TypeScript config (Bun TS only)
+│
+│   ── Deno ──────────────────────────────────────────────────────────
+├── deno.json                 ← nodeModulesDir, import map, task definitions
+└── globals.d.ts              ← TypeScript globals (always included for Deno)
+```
+
+**Next steps after scaffold:**
+
+```bash
+cd <project-name>
+
+# Node
+npm install && node base.js
+
+# Bun JS
+bun install && bun run base.js
+
+# Bun TS
+bun install && bun run base.ts
+
+# Deno (no install step — dependencies downloaded on first run)
+deno run --allow-all base.ts
+# or via deno.json task:
+deno task start
+```
+
+---
+
+### `stoat generate`
+
+Generate controllers and model schemas inside an existing Stoat project. Run from the project root.
+
+```bash
+# Full form
+stoat generate controller <name>
+stoat generate model <name>
+
+# Short aliases
+stoat g c <name>
+stoat g m <name>
+```
+
+**Controller** — creates `Engine/v1/<name>.js` (or `.ts` if `tsconfig.json` is present):
+
+```bash
+stoat g c users
+# → Engine/v1/users.js
+```
+
+**Model schema** — creates `Models/Schemas/<name>.json`:
+
+```bash
+stoat g m users
+# → Models/Schemas/users.json  (engine: MongoDB)
+```
+
+The generated controller includes all four HTTP methods pre-wired. The schema generator reads the first `db` engine from `bin/.config` and produces the correct shape automatically:
+
+| Engine | Generated schema shape |
+|---|---|
+| MongoDB · MySQL · MariaDB · PostgreSQL | `{ name, structure: { … } }` |
+| ClickHouse | `{ name, engine, orderBy, columns: [{ name, type }] }` |
+| CouchDB | `{ name, indexes: [{ name, fields }] }` |
+| Redis | `{ name, keyPrefix, defaultTTL }` |
+| QuestDB | `{ name, columns: [{ name, type }] }` |
+
+---
+
+### CLI internals
+
+| File | Purpose |
+|---|---|
+| [CLI/bin/stoat.js](CLI/bin/stoat.js) | Entry point — arg parsing, command dispatch, help text |
+| [CLI/commands/init.js](CLI/commands/init.js) | Interactive scaffold — prompts, file generation, directory copy |
+| [CLI/commands/generate.js](CLI/commands/generate.js) | Controller and model code generation |
+| [CLI/lib/prompt.js](CLI/lib/prompt.js) | Native `readline` wrapper — sequential questions, numbered select menus |
+| [CLI/lib/templates.js](CLI/lib/templates.js) | All file content generators (`baseJs`, `baseTs`, `controllerJs`, `controllerTs`, `globalsTs`, etc.) |
+| [CLI/lib/scaffold.js](CLI/lib/scaffold.js) | File system utilities — `ensureDir`, `writeFile`, `copyDir` |
+
+---
+
 ## Bun Support
 
-Stoat runs on **Bun 1.0+** without any code changes to your application. All Node.js built-in modules used by the framework (`http`, `https`, `fs`, `url`, `crypto`, `string_decoder`, `child_process`, `path`) are fully supported by Bun's Node.js compatibility layer. `stoatcore` itself has zero external dependencies, making it equally clean on both runtimes.
+Stoat runs on **Bun 1.0+** without any code changes to your application. All Node.js built-in modules used by the framework (`http`, `https`, `fs`, `url`, `crypto`, `string_decoder`, `child_process`, `path`) are fully supported by Bun's Node.js compatibility layer.
 
 ### Running with Bun
 
 ```bash
-bun run base.js
+bun run base.js     # JavaScript project
+bun run base.ts     # TypeScript project
 ```
 
 ### What changes under the hood
@@ -88,17 +237,159 @@ Two framework-level adjustments activate automatically when Bun is detected:
 | Package installer | `npm install <pkg> --save` | `bun add <pkg>` |
 | Runtime detection | — | `typeof Bun !== "undefined"` |
 
-The installer auto-detects the runtime at startup — no config change needed.
-
-### Outbound HTTP client (`_s.net`)
-
-All six bugs in `stoatcore`'s Net module (SC-1 through SC-6) have been fixed and will be published to npm. Once you have the updated package installed, `_s.net` works correctly on both Node.js and Bun with no additional patching. See [TODOS.md](TODOS.md) for details.
-
 ### Bun-specific notes
 
 - Use `bun add` instead of `npm install` when adding packages to a Bun project.
 - Bun reads from `node_modules/` just like Node.js — existing projects require no restructuring.
-- TypeScript files (`.ts`) are executed natively by Bun — set `__stoatData.appType = "ts"` in `base.js` when using a TypeScript project layout.
+- TypeScript files (`.ts`) are executed natively by Bun — use `stoat init` and choose **Bun + TypeScript** to get a pre-configured TS project.
+
+---
+
+## TypeScript Support
+
+### Bun TypeScript (fully supported)
+
+Bun executes `.ts` files natively — no `tsc`, no `ts-node`, no build step. A Bun TS project looks identical to a JS project, just with `.ts` extensions and optional type annotations.
+
+**Scaffold a Bun TS project:**
+
+```bash
+npx stoatframework init
+# → Runtime: Bun
+# → Language: TypeScript
+```
+
+This generates:
+- `base.ts` — typed entry point using `require()` (Bun supports CJS in `.ts`)
+- `globals.d.ts` — ambient declarations for `_s`, `stoat`, `log`, `__stoatData`
+- `tsconfig.json` — `CommonJS` module target, `skipLibCheck: true`
+- `.ts` controllers in `Engine/v1/`
+
+**Running:**
+
+```bash
+bun run base.ts         # start
+bun --watch base.ts     # dev mode with hot reload
+```
+
+**Writing TypeScript controllers:**
+
+```ts
+// Engine/v1/users.ts
+interface StoatRequest {
+    body:   Record<string, any>;
+    header: Record<string, any>;
+    query:  Record<string, any>;
+}
+
+type StoatCallback = (response: Record<string, any>) => void;
+
+class users {
+    get methods() {
+        return [
+            { name: "getUser",    method: "get"  },
+            { name: "createUser", method: "post" },
+        ];
+    }
+
+    getUser(request: StoatRequest, callback: StoatCallback): void {
+        callback({ headCode: 200, status: 1, message: "OK", data: {} });
+    }
+
+    async createUser(request: StoatRequest, _cb: StoatCallback) {
+        return { headCode: 201, status: 1, message: "Created", data: request.body };
+    }
+}
+
+module.exports = { users };
+```
+
+**TypeScript helpers:**
+
+Helpers can be written as `.ts` files. The framework loader checks `.js` first, then falls back to `.ts` automatically — no config change needed:
+
+```ts
+// Helpers/MyHelper.ts
+export function formatDate(d: Date): string {
+    return d.toISOString().split("T")[0];
+}
+```
+
+Access via `_s.helpers.MyHelper.formatDate(new Date())`.
+
+### Global type definitions (`globals.d.ts`)
+
+Generated automatically by `stoat init` for TS projects:
+
+```ts
+declare const _s: StoatGlobal;
+declare const stoat: StoatGlobal;
+declare const log: typeof console.log;
+declare var __stoatData: { appType: "js" | "ts" };
+```
+
+Extend the interfaces in `globals.d.ts` to type your own database connections and custom helpers.
+
+### Node.js TypeScript
+
+Node.js does not execute `.ts` natively. To use TypeScript with Node:
+
+```bash
+# Option A — ts-node (dev only)
+npx ts-node base.ts
+
+# Option B — tsx (faster, ESM-compatible)
+npx tsx base.ts
+```
+
+`stoat init` defaults Node projects to JavaScript. TypeScript is recommended via **Bun** where it requires zero extra tooling.
+
+### Deno TypeScript (fully supported)
+
+Deno 1.28+ is TypeScript-native and has first-class Node.js compatibility. Stoat uses a `createRequire` bridge in the Deno entry file so the CJS framework files work without any rewrites.
+
+**Scaffold a Deno project:**
+
+```bash
+npx stoatframework init
+# → Runtime: Deno
+# → Language: TypeScript (automatic — Deno's native language)
+```
+
+This generates:
+- `base.ts` — ESM entry using `createRequire(import.meta.url)` to load CJS framework files
+- `deno.json` — `nodeModulesDir: "auto"`, import map wiring `stoatcore` → `./StoatCore/core.js`, `start` / `dev` task definitions
+- `globals.d.ts` — ambient declarations for `_s`, `stoat`, `log`
+
+**Running:**
+
+```bash
+deno run --allow-all base.ts    # start (downloads deps automatically on first run)
+deno run --allow-all --watch base.ts  # dev mode
+# or via deno.json tasks:
+deno task start
+deno task dev
+```
+
+**How the CJS bridge works:**
+
+`base.ts` imports `createRequire` from `node:module` and uses it to load all framework files (which are CJS). The `stoatcore` bootstrap is resolved via the import map in `deno.json`:
+
+```jsonc
+// deno.json
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "stoatcore": "./StoatCore/core.js"   // always resolves to fixed v1.1.1
+  }
+}
+```
+
+This means `require("stoatcore")` inside `base.ts` via `createRequire` loads the local fixed copy — same bundling strategy as Node/Bun. Auto-installed packages use `deno add npm:<pkg>`, which Deno writes back into `deno.json` imports.
+
+**Writing Deno controllers:**
+
+Deno controllers are identical to Bun TS controllers — same `module.exports` syntax, same request/callback shape. The `createRequire` bridge handles CJS controller loading transparently.
 
 ---
 
@@ -106,11 +397,25 @@ All six bugs in `stoatcore`'s Net module (SC-1 through SC-6) have been fixed and
 
 ```
 project-root/
-├── base.js                   # Application entry point
+├── base.js / base.ts         # Application entry point
 ├── runStoatConfig.js         # Config loader & bootstrap
+├── CLI/                      # Stoat CLI (bundled with package)
+│   ├── bin/stoat.js          # CLI entry point
+│   ├── commands/
+│   │   ├── init.js           # stoat init
+│   │   └── generate.js       # stoat generate
+│   └── lib/
+│       ├── prompt.js         # readline wrapper
+│       ├── templates.js      # file content generators
+│       └── scaffold.js       # fs utilities
+├── StoatCore/                # Fixed stoatcore v1.1.1 (local source)
+│   ├── core.js
+│   ├── Helpers/
+│   ├── Net/
+│   └── System/
 ├── bin/
 │   └── .config               # JSON configuration file
-├── System/                   # Framework system layer (config folder)
+├── System/                   # Framework system layer
 │   ├── App/
 │   │   ├── middleware.js     # Request router & CORS handler
 │   │   └── installer.js      # npm / bun auto-installer
@@ -124,7 +429,7 @@ project-root/
 │       └── Payload.js        # Request/response processor
 ├── Engine/                   # Controllers (user-defined)
 │   └── v1/
-│       └── <endpoint>.js
+│       └── <endpoint>.js / <endpoint>.ts
 ├── Models/                   # Database layer
 │   ├── index.js              # DB bootstrap & schema loader
 │   ├── Schemas/              # JSON schema definitions
@@ -134,7 +439,7 @@ project-root/
 │       ├── MariaDB/mysql.js
 │       ├── PostgresSQL/postgres.js
 │       └── QuestDB/questdb.js
-├── Helpers/                  # User-defined helpers
+├── Helpers/                  # User-defined helpers (.js or .ts)
 │   ├── Encryption.js
 │   ├── Security.js
 │   ├── Helper.js
@@ -145,7 +450,9 @@ project-root/
 ├── OtherFiles/               # Supporting files
 │   ├── allowedUrls.txt       # Whitelisted CORS origins
 │   └── SSL/                  # TLS certificate files
-└── Uploads/                  # File upload directory
+├── Uploads/                  # File upload directory
+├── globals.d.ts              # TypeScript globals (TS projects only)
+└── tsconfig.json             # TypeScript config (TS projects only)
 ```
 
 > All folder names are configurable in `bin/.config` under the `folders` key.
@@ -261,13 +568,13 @@ The entire runtime behaviour of the framework is controlled by a single JSON fil
 
 `base.js` is the file that kicks off the entire application. It:
 
-1. Loads `stoatcore` — bootstraps the global `_s` object.
+1. Loads `stoatcore` (from `StoatCore/` via `file:` dependency) — bootstraps the global `_s` object.
 2. Sets `_s.misc.rootPath` to the project root.
 3. Calls `init()` which:
    - Parses `bin/.config` via `runStoatConfig.js`.
    - Iterates over `configData.net` to resolve which protocols are active.
    - Initialises all database connections listed under `_s.dbConfig`.
-   - Calls `runConnection()` which starts the HTTP/HTTPS servers.
+   - Calls `runConnection()` which starts the HTTP/HTTPS/WS servers.
 
 ```js
 // Minimal base.js
@@ -288,6 +595,8 @@ async function init() {
     // ... net loop & DB init ...
 }
 ```
+
+For **Bun TypeScript** projects, the entry file is `base.ts`. The structure is identical but with TypeScript annotations. `require()` works natively in Bun `.ts` files — no import rewriting needed.
 
 ---
 
@@ -362,6 +671,8 @@ module.exports = { users };
   1. Call the `callback(responseObj)` argument.
   2. `return` a plain object synchronously.
   3. `return` a `Promise` that resolves to a plain object.
+- Controller files can be `.js` or `.ts` — the route scanner detects both.
+- Use `stoat g c <name>` to scaffold a new controller with all four methods pre-wired.
 
 ---
 
@@ -451,6 +762,8 @@ All database engines live under `Models/Engines/`. They are bootstrapped by `Mod
 2. Creates a constructor on `_s.db[db.ref]` and attaches `config` and `schema` to its prototype.
 3. Loads the JSON schema file from `Models/Schemas/`.
 4. Calls the engine's `initDB(dbRef)` function.
+
+Engine files are always `.js`. For TypeScript projects running on Bun, `Models/index.js` loads them as `.js` directly — no transpilation or `.ts` engine variants are needed.
 
 ### Configuration template (`bin/.config` → `"db"` array)
 
@@ -597,9 +910,176 @@ const result = await db.run({ query: "SELECT * FROM sensor_data LIMIT 10" });
 
 ---
 
+### ClickHouse
+
+**File:** [Models/Engines/ClickHouse/clickhouse.js](Models/Engines/ClickHouse/clickhouse.js)
+**Package:** `@clickhouse/client`
+
+Column-oriented OLAP database optimised for analytical queries on large datasets. Schema sync runs on startup — tables are created and columns added automatically.
+
+**Schema file format** (`Models/Schemas/events.json`):
+
+```json
+[
+    {
+        "name":    "events",
+        "engine":  "MergeTree()",
+        "orderBy": "timestamp",
+        "columns": [
+            { "name": "timestamp", "type": "DateTime" },
+            { "name": "user_id",   "type": "UInt64"   },
+            { "name": "action",    "type": "String"   }
+        ]
+    }
+]
+```
+
+**`bin/.config` entry:**
+```json
+{
+    "engine": "ClickHouse", "package": "@clickhouse/client", "file": "events.json",
+    "url": "localhost", "port": 8123, "user": "default", "password": "",
+    "name": "default", "ref": "Analytics", "schema": "events"
+}
+```
+
+**Usage in a controller:**
+```js
+const db = new _s.db.Analytics();
+
+// SQL query — returns array of row objects
+const rows = await db.run("SELECT count() FROM events WHERE action = 'click'");
+
+// Insert rows
+await db.insert("events", [
+    { timestamp: new Date(), user_id: 1, action: "click" }
+]);
+
+// Raw client access for advanced operations
+const client = db.client;
+```
+
+**Startup behaviour:**
+- Creates tables that don't exist (`CREATE TABLE IF NOT EXISTS … ENGINE = MergeTree()`)
+- Adds columns that appear in schema but are missing from the live table
+- Does not drop or rename columns automatically (safe for production)
+
+---
+
+### CouchDB
+
+**File:** [Models/Engines/CouchDB/nano.js](Models/Engines/CouchDB/nano.js)
+**Package:** `nano`
+
+Document-oriented database. Each schema entry maps to one CouchDB database. Mango indexes declared in the schema are created/verified on startup.
+
+**Schema file format** (`Models/Schemas/users.json`):
+
+```json
+[
+    {
+        "name": "users",
+        "indexes": [
+            { "name": "email-index", "fields": ["email"] }
+        ]
+    }
+]
+```
+
+**`bin/.config` entry:**
+```json
+{
+    "engine": "CouchDB", "package": "nano", "file": "users.json",
+    "url": "localhost", "port": 5984, "user": "admin", "password": "",
+    "name": "mydb", "ref": "Users", "schema": "users"
+}
+```
+
+**Usage in a controller:**
+```js
+const db    = new _s.db.Users();
+const couch = db.connection;   // nano database handle
+
+// CRUD
+const doc     = await couch.get("doc-id");
+const created = await couch.insert({ name: "Ada", email: "ada@example.com" });
+await couch.destroy(doc._id, doc._rev);
+
+// Mango find (shorthand via db.find / db.run)
+const found = await db.find({ email: "ada@example.com" });
+// or with options:
+const found = await db.find({ type: "user" }, { limit: 10, skip: 0 });
+
+// Direct nano server access for database management
+const server = db.server;
+```
+
+---
+
+### Redis
+
+**File:** [Models/Engines/Redis/redis.js](Models/Engines/Redis/redis.js)
+**Package:** `redis`
+
+In-memory key-value store for caching, sessions, pub/sub, and queues. All keys are automatically prefixed with `keyPrefix` from the schema to avoid collisions when multiple apps share an instance.
+
+**Schema file format** (`Models/Schemas/cache.json`):
+
+```json
+[
+    {
+        "name":       "cache",
+        "keyPrefix":  "app:",
+        "defaultTTL": 3600
+    }
+]
+```
+
+**`bin/.config` entry:**
+```json
+{
+    "engine": "Redis", "package": "redis", "file": "cache.json",
+    "url": "localhost", "port": 6379, "user": "", "password": "",
+    "name": "0", "ref": "Cache", "schema": "cache"
+}
+```
+
+`name` is the Redis database index (default `0`).
+
+**Usage in a controller:**
+```js
+const cache = new _s.db.Cache();
+
+// Set with default TTL (3600 s from schema)
+await cache.set("user:1", { name: "Ada", role: "admin" });
+
+// Set with custom TTL (seconds)
+await cache.set("session:abc", { userId: 1 }, 900);
+
+// Get — returns parsed JSON or null
+const user = await cache.get("user:1");
+
+// Delete
+await cache.del("user:1");
+
+// Check existence
+const exists = await cache.has("user:1");   // true | false
+
+// Reset TTL without changing value
+await cache.expire("session:abc", 1800);
+
+// Raw Redis command (RESP protocol)
+await cache.run("LPUSH", "queue", "job-1");
+const len = await cache.run("LLEN", "queue");
+```
+
+---
+
 ## Helpers
 
 Helper modules live in the `Helpers/` folder. At startup `runStoatConfig.js` scans this directory and merges every exported function into the corresponding `_s.helpers.<HelperName>` namespace. User-defined helpers placed in this folder are discovered automatically.
+
+Helper files can be `.js` or `.ts`. The loader checks `.js` first, then falls back to `.ts` — no configuration needed to use TypeScript helpers on Bun.
 
 ### Encryption
 
@@ -650,16 +1130,38 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 ### Database
 
-**File:** [Helpers/Database.js](Helpers/Database.js) (loaded from StoatCore)
+**File:** [StoatCore/Helpers/Database.js](StoatCore/Helpers/Database.js)
 
 Namespace: `_s.helpers.Database`
 
-SQL and MongoDB sanitization utilities.
+Sanitization utilities for every supported database engine. Always sanitize user-supplied input before building queries.
 
-| Method | Description |
-|---|---|
-| `sanitizeSQL(value)` | Escapes SQL special characters to prevent injection |
-| `sanitizeMongo(obj)` | Strips MongoDB operator keys (`$`-prefixed) from query objects |
+| Method | Engines | Description |
+|---|---|---|
+| `sanitizeMongoData(data)` | MongoDB | Strips `$`-prefixed operator keys recursively — prevents NoSQL injection |
+| `sanitizeSQLData(data)` | MySQL · MariaDB · PostgreSQL · ClickHouse | Escapes SQL special characters (`'`, `"`, `\`, `%`, control chars) |
+| `sanitizeCouchData(data)` | CouchDB | Strips `_`-prefixed CouchDB internal keys and `$`-prefixed Mango operators |
+| `sanitizeClickHouseData(data)` | ClickHouse | SQL escaping + strips backticks and format braces `{}` used in ClickHouse parameterised query strings |
+| `sanitizeRedisKey(key)` | Redis | Allows only `[a-zA-Z0-9:._\-/@]` — blocks `\r\n` which break RESP framing |
+| `sanitizeRedisValue(value)` | Redis | Ensures values can be safely serialized; objects are JSON-stringified |
+
+```js
+// MongoDB
+const safe = _s.helpers.Database.sanitizeMongoData(req.body);
+
+// SQL
+const name = _s.helpers.Database.sanitizeSQLData(req.body.name);
+
+// CouchDB
+const doc = _s.helpers.Database.sanitizeCouchData(req.body);
+
+// ClickHouse
+const val = _s.helpers.Database.sanitizeClickHouseData(req.body.action);
+
+// Redis
+const key = _s.helpers.Database.sanitizeRedisKey(`user:${req.body.id}`);
+const val = _s.helpers.Database.sanitizeRedisValue(req.body);
+```
 
 ---
 
@@ -827,9 +1329,16 @@ Two exported functions are used throughout the framework:
 | Function                          | Description                                              |
 |-----------------------------------|----------------------------------------------------------|
 | `checkPackage(moduleName)`        | Returns `true` if the module resolves, `false` otherwise |
-| `installPackage(moduleName, type)`| Runs `bun add <pkg>` under Bun, `npm install <pkg> --save` (or `--save-dev` if `type === 1`) under Node.js |
+| `installPackage(moduleName, type)`| Runs the correct install command for the active runtime (see table below) |
 
-The runtime is detected once at module load via `typeof Bun !== "undefined"` — no configuration required.
+Runtime is detected once at module load — no configuration required.
+
+| Runtime | Install command |
+|---|---|
+| Deno | `deno add npm:<pkg>` |
+| Bun | `bun add <pkg>` |
+| Node (prod dep) | `npm install <pkg> --save` |
+| Node (dev dep, `type === 1`) | `npm install <pkg> --save-dev` |
 
 Packages listed in `"packages"` in `bin/.config` are verified and installed at every application startup. Database engine packages are also auto-installed when a new DB connection is first encountered.
 
@@ -899,7 +1408,8 @@ All framework-generated errors share the same response envelope with `status: 2`
 | `_s.helpers`                 | Object     | All loaded helper modules by name                |
 | `_s.helpers.Security`        | Object     | Security helper (incl. `domainSecurity`)         |
 | `_s.helpers.Encryption`      | Object     | Encryption helper                                |
-| `_s.helpers.Database`        | Object     | SQL/MongoDB sanitization helpers                 |
+| `_s.helpers.Database`        | Object     | DB sanitization helpers — Mongo, SQL, CouchDB, ClickHouse, Redis |
+| `_s.net`                     | Object     | Outbound HTTP/HTTPS client — `get`, `post`, `put`, `patch`, `delete`, `option`, `head` |
 | `_s.__system.mimeTypes`      | Array      | Loaded MIME type definitions                     |
 | `_s.__system.allowedOrigins` | Array      | Cached entries from `OtherFiles/allowedUrls.txt` |
 | `_s.__system.notFoundPage`   | String     | Resolved absolute path to 404 page (cached)      |
@@ -912,7 +1422,25 @@ All framework-generated errors share the same response envelope with `status: 2`
 
 ## Stoatcore: Source & Fixes
 
-`stoatcore` is loaded from a local copy at `StoatCore/` (nested in the repo, excluded from parent git via `.gitignore`). All known bugs have been fixed directly at source — no patch layer is needed at runtime. Full details are tracked in [TODOS.md](TODOS.md).
+`stoatcore` is loaded from a local copy at `StoatCore/` (nested in the repo). All known bugs (SC-1 through SC-8) have been fixed directly at source.
+
+### Bundling strategy
+
+Every project scaffolded by `stoat init` receives a copy of `StoatCore/` and references it via a `file:` dependency:
+
+```json
+"dependencies": {
+  "stoatcore": "file:./StoatCore"
+}
+```
+
+This ensures `require("stoatcore")` always resolves to the fixed v1.1.1, not the npm-published v1.0.0 which has the bugs below.
+
+**When the fixes are published to npm**, migrating any project is a one-line change:
+
+```json
+"stoatcore": "^1.1.1"
+```
 
 ### Bugs fixed in `StoatCore/` source
 
@@ -927,13 +1455,24 @@ All framework-generated errors share the same response envelope with `status: 2`
 | SC-7 | `Helpers/Helper.js` | `writeBase64ToFile` — added `fs`/`path` imports, fixed path construction |
 | SC-8 | `Helpers/Encryption.js` | 3DES → AES-256-GCM; MD5 → SHA-256; added scrypt password hashing |
 
-### Pending stoatcore features
+### `_s.net` streaming responses (SC-F3)
 
-| ID | Item |
-|---|---|
-| SC-F1 | WebSocket support |
-| SC-F2 | CLI scaffolding tool |
-| SC-F3 | `_s.net` streaming responses |
+Pass `stream: true` to any `_s.net` method to receive the raw `IncomingMessage` instead of buffering the full response. This avoids OOM on large or chunked responses.
+
+```js
+// Pipe a large file download directly into an HTTP response
+const res = await _s.net.get({ url: "https://example.com/large-file.zip", stream: true });
+// res.stream  — raw Node.js IncomingMessage
+// res.statusCode, res.headers — available immediately
+res.stream.pipe(response);   // pipe into Stoat's outbound response
+
+// Or consume manually
+res.stream.on("data",  (chunk) => { /* ... */ });
+res.stream.on("end",   ()      => { /* ... */ });
+res.stream.on("error", (err)   => { /* ... */ });
+```
+
+> The caller owns the stream — always consume or destroy it to avoid memory leaks.
 
 ---
 

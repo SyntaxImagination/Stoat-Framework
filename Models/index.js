@@ -11,20 +11,16 @@ const {
       mkdirSync,
       writeFileSync,
       readFileSync,
+      existsSync,
 } = require("fs");
-
-let type = __stoatData.appType;
 
 const systemPath = `${_s.misc.rootPath}/${paths.config}`,
       schemaFolder = `${_s.misc.rootPath}/${paths.model}/Schemas`;
 
 const { checkPackage, installPackage } = require(`${systemPath}/App/installer`);
 
-let modelsPath = `${_s.misc.rootPath}/${paths.model}`;
-
-if (type === "ts") {
-      modelsPath = `${__stoatData.tsDir}/${paths.model}`;
-}
+// Bun executes .ts natively but engine files are always .js — use rootPath directly
+const modelsPath = `${_s.misc.rootPath}/${paths.model}`;
 
 module.exports = async (databases, callback = ({}) => {}) => {
       databases.forEach(async (db, index) => {
@@ -63,7 +59,10 @@ module.exports = async (databases, callback = ({}) => {}) => {
             }
 
             //Now Run the DB File in Templates to create
-            let dbFile = `${modelsPath}/Engines/${db.engine}/${db.package}.${type}`;
+            // Prefer .js engine file (engine files are always CJS); .ts fallback for future use
+            const dbFileJs = `${modelsPath}/Engines/${db.engine}/${db.package}.js`;
+            const dbFileTs = `${modelsPath}/Engines/${db.engine}/${db.package}.ts`;
+            let dbFile = existsSync(dbFileJs) ? dbFileJs : dbFileTs;
 
             //Set Up Schema
             if ("file" in db) {

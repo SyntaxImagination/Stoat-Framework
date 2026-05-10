@@ -9,6 +9,15 @@
  *  4. `option` and `delete` methods used `params` but received arg named `option`
  *  5. `Content-Length` used `params.data.length` (wrong for multi-byte chars) → Buffer.byteLength
  *  6. Response body was resolved inside `data` event before `end` — data was never fully buffered
+ *
+ * SC-F3 — Streaming support:
+ *  Pass `stream: true` in params to receive the raw IncomingMessage instead of buffering.
+ *  Resolved value: { statusCode, message, headers, stream: IncomingMessage }
+ *  The caller is responsible for consuming and destroying the stream.
+ *
+ *  Usage:
+ *    const res = await _s.net.get({ url: "http://...", stream: true });
+ *    res.stream.pipe(writableDestination);
  */
 
 "use strict";
@@ -131,6 +140,13 @@ function processRequest(params) {
                   response.statusCode = resp.statusCode;
                   response.message = resp.statusMessage;
                   response.headers = resp.headers;
+
+                  // SC-F3: stream mode — hand back the raw IncomingMessage immediately
+                  if (params.stream === true) {
+                        response.stream = resp;
+                        success(response);
+                        return;
+                  }
 
                   // Fix 6: buffer all chunks, resolve only on `end`
                   let rawBuffer = "";
